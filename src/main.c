@@ -55,9 +55,9 @@ static void s_tick_handler(struct tm *tick_time, TimeUnits units_changed) {
             timebar_layer_set_hidden(s_timebar_layer[SEC], false);
         } else {
             if ((tick_time->tm_sec % 2) == 0) {
-                s_update(GREEN, true);
-            } else {
                 s_update(GREEN, false);
+            } else {
+                s_update(GREEN, true);
             }
             timebar_layer_set_hidden(s_timebar_layer[SEC], true);
         }
