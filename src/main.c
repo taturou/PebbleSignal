@@ -43,8 +43,8 @@ static void s_tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     if ((tick_time->tm_min % 2) == 0) {
         s_update(RED, false);
         
-        timebar_layer_set_bar_color(s_timebar_layer[MIN], GColorRed);
-        timebar_layer_set_bar_color(s_timebar_layer[SEC], GColorRed);
+        timebar_layer_set_bar_color(s_timebar_layer[MIN], GColorRed, GColorBulgarianRose);
+        timebar_layer_set_bar_color(s_timebar_layer[SEC], GColorRed, GColorBulgarianRose);
         timebar_layer_set_bar_height(s_timebar_layer[MIN], 1);
         timebar_layer_set_bar_height(s_timebar_layer[SEC], 1);
         timebar_layer_set_hidden(s_timebar_layer[SEC], false);
@@ -62,8 +62,8 @@ static void s_tick_handler(struct tm *tick_time, TimeUnits units_changed) {
             timebar_layer_set_hidden(s_timebar_layer[SEC], true);
         }
 
-        timebar_layer_set_bar_color(s_timebar_layer[MIN], GColorJaegerGreen);
-        timebar_layer_set_bar_color(s_timebar_layer[SEC], GColorJaegerGreen);
+        timebar_layer_set_bar_color(s_timebar_layer[MIN], GColorJaegerGreen, GColorMidnightGreen);
+        timebar_layer_set_bar_color(s_timebar_layer[SEC], GColorJaegerGreen, GColorMidnightGreen);
         timebar_layer_set_bar_height(s_timebar_layer[MIN], 1);
         timebar_layer_set_bar_height(s_timebar_layer[SEC], 2);
     }
