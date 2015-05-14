@@ -16,6 +16,8 @@ static bool is_tick_timer_subscribe = false;
 #define MIN      (0)
 #define SEC      (1)
 
+#define DELAY_UP_TO_DOWN    (4000)
+
 static void s_base_layer_update_proc(struct Layer *layer, GContext *ctx) {
     graphics_context_set_fill_color(ctx, GColorBlack);
     graphics_fill_rect(ctx, layer_get_bounds(layer), 0, GCornerNone);
@@ -84,8 +86,11 @@ static void s_tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     timebar_layer_set_value(s_timebar_layer[SEC], tick_time->tm_sec);
 }
 
+static void s_down_click_handler(ClickRecognizerRef recognizer, void *context);
+
 static void s_up_animation_stopped_handler(Animation *animation, bool finished, void *context) {
     animation_destroy(animation);
+    s_down_click_handler(NULL, NULL);
 }
 
 static void s_down_animation_stopped_handler(Animation *animation, bool finished, void *context) {
@@ -94,18 +99,22 @@ static void s_down_animation_stopped_handler(Animation *animation, bool finished
 }
 
 static void s_select_click_handler(ClickRecognizerRef recognizer, void *context) {
+    (void)recognizer;
+    (void)context;
+
     if (is_tick_timer_subscribe == true) {
         tick_timer_service_unsubscribe();
         is_tick_timer_subscribe = false;
-        s_update(GREEN, false);
     } else {
-        s_update(GREEN, false);
         tick_timer_service_subscribe(SECOND_UNIT, s_tick_handler);
         is_tick_timer_subscribe = true;
     }
 }
 
 static void s_up_click_handler(ClickRecognizerRef recognizer, void *context) {
+    (void)recognizer;
+    (void)context;
+
     GRect from_frame = layer_get_frame(s_base_layer);
     GRect to_frame = GRect(from_frame.origin.x,
                            layer_get_bounds(time_layer_get_layer(s_time_layer)).size.h * -1,
@@ -133,17 +142,18 @@ static void s_down_click_handler(ClickRecognizerRef recognizer, void *context) {
                            (AnimationHandlers){.started = NULL,
                                                .stopped = s_down_animation_stopped_handler},
                            (void*)animation);
+    animation_set_delay(property_animation_get_animation(animation), DELAY_UP_TO_DOWN);
     animation_schedule(property_animation_get_animation(animation));
 }
 
 static void s_click_config_provider(void *context) {
     window_single_click_subscribe(BUTTON_ID_SELECT, s_select_click_handler);
     window_single_click_subscribe(BUTTON_ID_UP, s_up_click_handler);
-    window_single_click_subscribe(BUTTON_ID_DOWN, s_down_click_handler);
+//    window_single_click_subscribe(BUTTON_ID_DOWN, s_down_click_handler);
 }
 
 static void s_accel_tap_handler(AccelAxisType axis, int32_t direction) {
-    
+    s_up_click_handler(NULL, NULL);
 }
 
 static void s_window_load(Window *window) {
