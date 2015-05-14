@@ -1,0 +1,33 @@
+{
+    "appKeys": {},
+    "capabilities": [
+        ""
+    ],
+    "companyName": "taturou@gmail.com",
+    "longName": "signal",
+    "projectType": "native",
+    "resources": {
+        "media": [
+            {
+                "file": "images/signal_red_bw.png",
+                "name": "IMAGE_SIGNAL_RED",
+                "type": "png"
+            },
+            {
+                "file": "images/signal_green_bw.png",
+                "name": "IMAGE_SIGNAL_GREEN",
+                "type": "png"
+            }
+        ]
+    },
+    "sdkVersion": "3",
+    "shortName": "signal",
+    "targetPlatforms": [
+        "basalt"
+    ],
+    "uuid": "1e73b945-7e02-43b9-befe-30ac20f75795",
+    "versionLabel": "1.0",
+    "watchapp": {
+        "watchface": false
+    }
+}
