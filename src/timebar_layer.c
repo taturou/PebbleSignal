@@ -21,15 +21,15 @@ static void s_layer_update_proc(struct Layer *layer, GContext *ctx) {
     
     int max = HEIGHT / (timebar_layer->bar_height + 1);
     
-    graphics_context_set_stroke_color(ctx, timebar_layer->bar_color_bg);
+    graphics_context_set_fill_color(ctx, timebar_layer->bar_color_bg);
     for (int i = 0; i < timebar_layer->value; i++) {
         uint16_t y = i * (timebar_layer->bar_height + 1);
-        graphics_draw_rect(ctx, GRect(0, y, WIDTH, timebar_layer->bar_height));
+        graphics_fill_rect(ctx, GRect(0, y, WIDTH, timebar_layer->bar_height), 0, GCornerNone);
     }
-    graphics_context_set_stroke_color(ctx, timebar_layer->bar_color_fg);
+    graphics_context_set_fill_color(ctx, timebar_layer->bar_color_fg);
     for (int i = timebar_layer->value; i < max; i++) {
         uint16_t y = i * (timebar_layer->bar_height + 1);
-        graphics_draw_rect(ctx, GRect(0, y, WIDTH, timebar_layer->bar_height));
+        graphics_fill_rect(ctx, GRect(0, y, WIDTH, timebar_layer->bar_height), 0, GCornerNone);
     }
 }
     

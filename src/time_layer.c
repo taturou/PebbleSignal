@@ -1,6 +1,10 @@
 #include <pebble.h>
 #include "time_layer.h"
 
+/* configurations */
+#define DISPLAY_DATE    (1)
+
+/* code */
 struct TimeLayer {
     Layer *layer;
 };
@@ -100,16 +104,7 @@ static void s_layer_update_proc(struct Layer *layer, GContext *ctx) {
     GPoint p3 = GPoint(S_CENTER_X_3, S_CENTER_Y_3);
     graphics_fill_circle(ctx, p3, S_RADIUS);
 
-#if 0
-    snprintf(str, 31, "%d", now_tm->tm_hour);
-    s_graphics_draw_text(ctx, str, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), s_grect_circle_to_rect(p1, S_RADIUS));
-
-    snprintf(str, 31, "%02d", now_tm->tm_min);
-    s_graphics_draw_text(ctx, str, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), s_grect_circle_to_rect(p2, S_RADIUS));
-
-    snprintf(str, 31, "%02d", now_tm->tm_sec);
-    s_graphics_draw_text(ctx, str, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), s_grect_circle_to_rect(p3, S_RADIUS));
-#else
+#if DISPLAY_DATE
     snprintf(str, 31, "%d/%d", now_tm->tm_mon+1, now_tm->tm_mday);
     s_graphics_draw_text(ctx, str, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), s_grect_circle_to_rect(p1, S_RADIUS));
     
@@ -118,7 +113,16 @@ static void s_layer_update_proc(struct Layer *layer, GContext *ctx) {
 
     snprintf(str, 31, "%02d", now_tm->tm_min);
     s_graphics_draw_text(ctx, str, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), s_grect_circle_to_rect(p3, S_RADIUS));
-#endif
+#else /* ! DISPLAY_DATE */
+    snprintf(str, 31, "%d", now_tm->tm_hour);
+    s_graphics_draw_text(ctx, str, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), s_grect_circle_to_rect(p1, S_RADIUS));
+
+    snprintf(str, 31, "%02d", now_tm->tm_min);
+    s_graphics_draw_text(ctx, str, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), s_grect_circle_to_rect(p2, S_RADIUS));
+
+    snprintf(str, 31, "%02d", now_tm->tm_sec);
+    s_graphics_draw_text(ctx, str, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), s_grect_circle_to_rect(p3, S_RADIUS));
+#endif /* ! DISPLAY_DATE */
 }
     
 TimeLayer *time_layer_create(GRect window_bounds) {
