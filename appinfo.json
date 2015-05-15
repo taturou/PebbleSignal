@@ -9,13 +9,23 @@
     "resources": {
         "media": [
             {
-                "file": "images/signal_red_bw.png",
-                "name": "IMAGE_SIGNAL_RED",
+                "file": "images/signal_red_Red.png",
+                "name": "IMAGE_SIGNAL_RED_RED",
                 "type": "png"
             },
             {
-                "file": "images/signal_green_bw.png",
-                "name": "IMAGE_SIGNAL_GREEN",
+                "file": "images/signal_red_BulgarianRose.png",
+                "name": "IMAGE_SIGNAL_RED_BULGARIANROSE",
+                "type": "png"
+            },
+            {
+                "file": "images/signal_green_JaegerGreen.png",
+                "name": "IMAGE_SIGNAL_GREEN_JAEGERGREEN",
+                "type": "png"
+            },
+            {
+                "file": "images/signal_green_MidnightGreen.png",
+                "name": "IMAGE_SIGNAL_GREEN_MIDNIGHTGREEN",
                 "type": "png"
             }
         ]
@@ -28,6 +38,6 @@
     "uuid": "1e73b945-7e02-43b9-befe-30ac20f75795",
     "versionLabel": "1.0",
     "watchapp": {
-        "watchface": false
+        "watchface": true
     }
 }

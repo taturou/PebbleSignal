@@ -11,12 +11,15 @@ static TimeLayer *s_time_layer;
 static Layer *s_base_layer;
 static BitmapLayer *s_bmp_layer;
 static TimebarLayer *s_timebar_layer[2];
-static GBitmap *s_bmp[2];    // 0:green, 1:red
+static GBitmap *s_bmp[2][2];    // 0:green, 1:red
 static bool is_tick_timer_subscribe = false;
 static bool is_display_time = false;
 
 #define GREEN    (0)
 #define RED      (1)
+
+#define ON       (0)
+#define OFF      (1)
 
 #define MIN      (0)
 #define SEC      (1)
@@ -31,22 +34,24 @@ static void s_base_layer_update_proc(struct Layer *layer, GContext *ctx) {
 static void s_update(int green_or_red, bool hidden) {
     Layer *layer = bitmap_layer_get_layer(s_bmp_layer);
 
-    if (hidden == true) {
-        if (layer_get_hidden(layer) == false) {
-            layer_set_hidden(layer, true);
+    if (green_or_red == GREEN) {
+        if (hidden == false) {
+            if (bitmap_layer_get_bitmap(s_bmp_layer) != s_bmp[GREEN][ON]) {
+                bitmap_layer_set_bitmap(s_bmp_layer, s_bmp[GREEN][ON]);
+            }                
+        } else {
+            if (bitmap_layer_get_bitmap(s_bmp_layer) != s_bmp[GREEN][OFF]) {
+                bitmap_layer_set_bitmap(s_bmp_layer, s_bmp[GREEN][OFF]);
+            }                                
         }
-    } else {
-        if (layer_get_hidden(layer) == true) {
-            layer_set_hidden(layer, false);
-        }
-
-        if (green_or_red == GREEN) {
-            if (bitmap_layer_get_bitmap(s_bmp_layer) == s_bmp[RED]) {
-                bitmap_layer_set_bitmap(s_bmp_layer, s_bmp[GREEN]);
+    } else { /* RED */
+        if (hidden == false) {
+            if (bitmap_layer_get_bitmap(s_bmp_layer) != s_bmp[RED][ON]) {
+                bitmap_layer_set_bitmap(s_bmp_layer, s_bmp[RED][ON]);
             }
         } else {
-            if (bitmap_layer_get_bitmap(s_bmp_layer) == s_bmp[GREEN]) {
-                bitmap_layer_set_bitmap(s_bmp_layer, s_bmp[RED]);
+            if (bitmap_layer_get_bitmap(s_bmp_layer) != s_bmp[RED][OFF]) {
+                bitmap_layer_set_bitmap(s_bmp_layer, s_bmp[RED][OFF]);
             }
         }
     }
@@ -196,13 +201,15 @@ static void s_window_load(Window *window) {
     layer_add_child(window_layer, s_base_layer);
     
     // create bitmap
-    s_bmp[GREEN] = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SIGNAL_GREEN);
-    s_bmp[RED] = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SIGNAL_RED);
+    s_bmp[GREEN][ON] = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SIGNAL_GREEN_JAEGERGREEN);
+    s_bmp[GREEN][OFF] = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SIGNAL_GREEN_MIDNIGHTGREEN);
+    s_bmp[RED][ON] = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SIGNAL_RED_RED);
+    s_bmp[RED][OFF] = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SIGNAL_RED_BULGARIANROSE);
 
     // create bitmap-layer
     s_bmp_layer = bitmap_layer_create(window_bounds);
     bitmap_layer_set_background_color(s_bmp_layer, GColorBlack);
-    bitmap_layer_set_bitmap(s_bmp_layer, s_bmp[GREEN]);
+    bitmap_layer_set_bitmap(s_bmp_layer, s_bmp[GREEN][ON]);
     layer_add_child(s_base_layer, bitmap_layer_get_layer(s_bmp_layer));
 
     // create time-layer
@@ -220,6 +227,9 @@ static void s_window_load(Window *window) {
     // start tap-service
     accel_service_set_sampling_rate(ACCEL_SAMPLING_50HZ);
     accel_tap_service_subscribe(s_accel_tap_handler);
+    
+    // display time
+    s_display_time();
 }
 
 static void s_window_unload(Window *window) {
@@ -232,8 +242,10 @@ static void s_window_unload(Window *window) {
     
     bitmap_layer_destroy(s_bmp_layer);
     
-    gbitmap_destroy(s_bmp[GREEN]);
-    gbitmap_destroy(s_bmp[RED]);
+    gbitmap_destroy(s_bmp[GREEN][ON]);
+    gbitmap_destroy(s_bmp[GREEN][OFF]);
+    gbitmap_destroy(s_bmp[RED][ON]);
+    gbitmap_destroy(s_bmp[RED][OFF]);
     
     layer_destroy(s_base_layer);
     
