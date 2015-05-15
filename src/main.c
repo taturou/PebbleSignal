@@ -9,6 +9,7 @@ static BitmapLayer *s_bmp_layer;
 static TimebarLayer *s_timebar_layer[2];
 static GBitmap *s_bmp[2];    // 0:green, 1:red
 static bool is_tick_timer_subscribe = false;
+static bool is_display_time = false;
 
 #define GREEN    (0)
 #define RED      (1)
@@ -83,76 +84,71 @@ static void s_tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     timebar_layer_set_value(s_timebar_layer[SEC], tick_time->tm_sec);
 }
 
-static void s_down_click_handler(ClickRecognizerRef recognizer, void *context);
-
-static void s_up_animation_stopped_handler(Animation *animation, bool finished, void *context) {
-    animation_destroy(animation);
-    s_down_click_handler(NULL, NULL);
-}
-
-static void s_down_animation_stopped_handler(Animation *animation, bool finished, void *context) {
-    animation_destroy(animation);
+static void s_down_animation_stopped_handler(Animation *down_animation, bool finished, void *context) {
+    animation_destroy(down_animation);
     time_layer_set_hidden(s_time_layer, true);
+    is_display_time = false;
 }
 
-static void s_select_click_handler(ClickRecognizerRef recognizer, void *context) {
-    (void)recognizer;
-    (void)context;
+static void s_up_animation_stopped_handler(Animation *up_animation, bool finished, void *context) {
+    animation_destroy(up_animation);
 
-    if (is_tick_timer_subscribe == true) {
-        tick_timer_service_unsubscribe();
-        is_tick_timer_subscribe = false;
-    } else {
-        tick_timer_service_subscribe(SECOND_UNIT, s_tick_handler);
-        is_tick_timer_subscribe = true;
-    }
-}
-
-static void s_up_click_handler(ClickRecognizerRef recognizer, void *context) {
-    (void)recognizer;
-    (void)context;
-
-    GRect from_frame = layer_get_frame(s_base_layer);
-    GRect to_frame = GRect(from_frame.origin.x,
-                           layer_get_bounds(time_layer_get_layer(s_time_layer)).size.h * -1,
-                           from_frame.size.w,
-                           from_frame.size.h);
-
-    time_layer_set_hidden(s_time_layer, false);
-    PropertyAnimation *animation = property_animation_create_layer_frame(s_base_layer, &from_frame, &to_frame);
-    animation_set_handlers(property_animation_get_animation(animation),
-                           (AnimationHandlers){.started = NULL,
-                                               .stopped = s_up_animation_stopped_handler},
-                           (void*)animation);
-    animation_set_curve(property_animation_get_animation(animation), AnimationCurveEaseIn);
-    animation_schedule(property_animation_get_animation(animation));
-}
-
-static void s_down_click_handler(ClickRecognizerRef recognizer, void *context) {
+    // start animation to hide
     GRect from_frame = layer_get_frame(s_base_layer);
     GRect to_frame = GRect(from_frame.origin.x,
                            0,
                            from_frame.size.w,
                            from_frame.size.h);
 
-    PropertyAnimation *animation = property_animation_create_layer_frame(s_base_layer, &from_frame, &to_frame);
-    animation_set_handlers(property_animation_get_animation(animation),
+    PropertyAnimation *down_animation = property_animation_create_layer_frame(s_base_layer, &from_frame, &to_frame);
+    animation_set_handlers(property_animation_get_animation(down_animation),
                            (AnimationHandlers){.started = NULL,
                                                .stopped = s_down_animation_stopped_handler},
-                           (void*)animation);
-    animation_set_delay(property_animation_get_animation(animation), DELAY_UP_TO_DOWN);
-    animation_set_curve(property_animation_get_animation(animation), AnimationCurveEaseOut);
-    animation_schedule(property_animation_get_animation(animation));
+                           (void*)down_animation);
+    animation_set_delay(property_animation_get_animation(down_animation), DELAY_UP_TO_DOWN);
+    animation_set_curve(property_animation_get_animation(down_animation), AnimationCurveEaseOut);
+    animation_schedule(property_animation_get_animation(down_animation));
+}
+
+static void s_display_time(void) {
+    if (is_display_time == false) {
+        is_display_time = true;
+        
+        GRect from_frame = layer_get_frame(s_base_layer);
+        GRect to_frame = GRect(from_frame.origin.x,
+                               layer_get_bounds(time_layer_get_layer(s_time_layer)).size.h * -1,
+                               from_frame.size.w,
+                               from_frame.size.h);
+    
+        time_layer_set_hidden(s_time_layer, false);
+        PropertyAnimation *animation = property_animation_create_layer_frame(s_base_layer, &from_frame, &to_frame);
+        animation_set_handlers(property_animation_get_animation(animation),
+                               (AnimationHandlers){.started = NULL,
+                                                   .stopped = s_up_animation_stopped_handler},
+                               (void*)animation);
+        animation_set_curve(property_animation_get_animation(animation), AnimationCurveEaseIn);
+        animation_schedule(property_animation_get_animation(animation));
+    }
+}
+
+static void s_select_click_handler(ClickRecognizerRef recognizer, void *context) {
+}
+
+static void s_up_click_handler(ClickRecognizerRef recognizer, void *context) {
+    s_display_time();
+}
+
+static void s_down_click_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void s_click_config_provider(void *context) {
     window_single_click_subscribe(BUTTON_ID_SELECT, s_select_click_handler);
     window_single_click_subscribe(BUTTON_ID_UP, s_up_click_handler);
-//    window_single_click_subscribe(BUTTON_ID_DOWN, s_down_click_handler);
+    window_single_click_subscribe(BUTTON_ID_DOWN, s_down_click_handler);
 }
 
 static void s_accel_tap_handler(AccelAxisType axis, int32_t direction) {
-    s_up_click_handler(NULL, NULL);
+    s_display_time();
 }
 
 static void s_window_load(Window *window) {
