@@ -48,8 +48,6 @@ static void s_update(int green_or_red, bool hidden) {
 }
     
 static void s_tick_handler(struct tm *tick_time, TimeUnits units_changed) {
-    // APP_LOG(APP_LOG_LEVEL_DEBUG, "%02d:%02d:%02d", tick_time->tm_hour, tick_time->tm_min, tick_time->tm_sec);
-
     if ((tick_time->tm_min % 2) == 0) {
         if (tick_time->tm_sec < 59) {
             s_update(RED, false);
@@ -66,20 +64,19 @@ static void s_tick_handler(struct tm *tick_time, TimeUnits units_changed) {
         if (tick_time->tm_sec < 40) {
             s_update(GREEN, false);
 
-            timebar_layer_set_hidden(s_timebar_layer[SEC], false);
         } else {
             if ((tick_time->tm_sec % 2) == 0) {
                 s_update(GREEN, false);
             } else {
                 s_update(GREEN, true);
             }
-            timebar_layer_set_hidden(s_timebar_layer[SEC], true);
         }
 
         timebar_layer_set_bar_color(s_timebar_layer[MIN], GColorJaegerGreen, GColorMidnightGreen);
         timebar_layer_set_bar_color(s_timebar_layer[SEC], GColorJaegerGreen, GColorMidnightGreen);
         timebar_layer_set_bar_height(s_timebar_layer[MIN], 1);
         timebar_layer_set_bar_height(s_timebar_layer[SEC], 2);
+        timebar_layer_set_hidden(s_timebar_layer[SEC], false);
     }
 
     timebar_layer_set_value(s_timebar_layer[MIN], tick_time->tm_min);
@@ -127,6 +124,7 @@ static void s_up_click_handler(ClickRecognizerRef recognizer, void *context) {
                            (AnimationHandlers){.started = NULL,
                                                .stopped = s_up_animation_stopped_handler},
                            (void*)animation);
+    animation_set_curve(property_animation_get_animation(animation), AnimationCurveEaseIn);
     animation_schedule(property_animation_get_animation(animation));
 }
 
@@ -143,6 +141,7 @@ static void s_down_click_handler(ClickRecognizerRef recognizer, void *context) {
                                                .stopped = s_down_animation_stopped_handler},
                            (void*)animation);
     animation_set_delay(property_animation_get_animation(animation), DELAY_UP_TO_DOWN);
+    animation_set_curve(property_animation_get_animation(animation), AnimationCurveEaseOut);
     animation_schedule(property_animation_get_animation(animation));
 }
 

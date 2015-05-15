@@ -7,18 +7,11 @@ struct TimeLayer {
 
 #define L_MARGIN_TOP      (2)
 #define L_MARGIN_BOTTOM   (2)
-#define L_MARGIN_LEFT     (2)
-#define L_MARGIN_RIGHT    (2)
-#define L_MARGIN_NEXT     (40)
+#define L_RECT_ORIGIN_X   (2)
+#define L_RECT_ORIGIN_Y   (2)
+#define L_RECT_SIZE_W     (140)
+#define L_RECT_SIZE_H     (50)
 #define L_RADIUS          (25)
-#define L_CENTER_X_1      (L_RADIUS + L_MARGIN_LEFT)
-#define L_CENTER_Y_1      (L_RADIUS + L_MARGIN_TOP)
-#define L_CENTER_X_2      (L_CENTER_X_1 + (L_RADIUS * 2 + L_MARGIN_NEXT))
-#define L_CENTER_Y_2      (L_CENTER_Y_1)
-#define L_RECT_ORIGIN_X   (L_CENTER_X_1)
-#define L_RECT_ORIGIN_Y   (L_MARGIN_TOP)
-#define L_RECT_SIZE_W     (L_RADIUS * 2 + L_MARGIN_NEXT)
-#define L_RECT_SIZE_H     (L_RADIUS * 2 + 1)
 
 #define S_MARGIN_TOP      (7)
 #define S_MARGIN_BOTTOM   (7)
@@ -40,8 +33,37 @@ static GRect s_grect_circle_to_rect(GPoint p, uint16_t radius) {
     rect.origin.y = p.y - radius;
     rect.size.w = radius * 2;
     rect.size.h = rect.size.w;
-    
     return rect;
+}
+
+static GRect s_grect_change_size(GRect rect, GSize size) {
+    int16_t dw = rect.size.w - size.w;
+    int16_t dh = rect.size.h - size.h;
+
+    rect.origin.x += dw / 2;
+    rect.origin.y += dh / 2;
+    rect.size = size;
+
+    rect.origin.x += 1;            // magic number
+    rect.origin.y -= size.h / 5;   // magic number
+
+    return rect;
+}
+
+static void s_graphics_draw_text(GContext *ctx, const char *text, GFont const font, const GRect box) {
+    GTextOverflowMode overflow_mode = GTextOverflowModeWordWrap;
+    GTextAlignment alignment = GTextAlignmentCenter;
+        
+    GSize text_size = graphics_text_layout_get_content_size(text, font, box, overflow_mode, alignment);
+    GRect text_box = s_grect_change_size(box, text_size);
+
+    graphics_context_set_text_color(ctx, GColorWhite);
+    graphics_draw_text(ctx, text, font, text_box, overflow_mode, alignment, NULL);
+#if 0
+    graphics_context_set_stroke_color(ctx, GColorPurple);
+    graphics_draw_rect(ctx, box);
+    graphics_draw_rect(ctx, text_box);
+#endif
 }
 
 static void s_layer_update_proc(struct Layer *layer, GContext *ctx) {
@@ -54,57 +76,49 @@ static void s_layer_update_proc(struct Layer *layer, GContext *ctx) {
 
     // text
     char str[32];
-    GPoint p;
-    graphics_context_set_text_color(ctx, GColorDarkGray);
 
     // background
     graphics_context_set_fill_color(ctx, GColorBlack);
     graphics_fill_rect(ctx, bounds, 0, GCornerNone);
 
     // case of signal
-    graphics_context_set_fill_color(ctx, GColorDarkGray);
-    graphics_fill_circle(ctx, GPoint(L_CENTER_X_1, L_CENTER_Y_1), L_RADIUS);
-    graphics_fill_circle(ctx, GPoint(L_CENTER_X_2, L_CENTER_Y_2), L_RADIUS);
-    graphics_fill_rect(ctx, GRect(L_RECT_ORIGIN_X, L_RECT_ORIGIN_Y, L_RECT_SIZE_W, L_RECT_SIZE_H), 0, GCornerNone);
+    graphics_context_set_fill_color(ctx, GColorWhite);
+    graphics_fill_rect(ctx, GRect(L_RECT_ORIGIN_X, L_RECT_ORIGIN_Y, L_RECT_SIZE_W, L_RECT_SIZE_H), L_RADIUS, GCornersAll);
 
     // signal (green)
     graphics_context_set_fill_color(ctx, GColorJaegerGreen);
-    p = GPoint(S_CENTER_X_1, S_CENTER_Y_1);
-    graphics_fill_circle(ctx, p, S_RADIUS);
-    snprintf(str, 31, "%d", now_tm->tm_hour);
-    graphics_draw_text(ctx,
-                       str,
-                       fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD),
-                       s_grect_circle_to_rect(p, S_RADIUS),
-                       GTextOverflowModeWordWrap,
-                       GTextAlignmentCenter,
-                       NULL);
+    GPoint p1 = GPoint(S_CENTER_X_1, S_CENTER_Y_1);
+    graphics_fill_circle(ctx, p1, S_RADIUS);
 
     // signal (yellow)
     graphics_context_set_fill_color(ctx, GColorChromeYellow);
-    p = GPoint(S_CENTER_X_2, S_CENTER_Y_2);
-    graphics_fill_circle(ctx, p, S_RADIUS);
-    snprintf(str, 31, "%02d", now_tm->tm_min);
-    graphics_draw_text(ctx,
-                       str,
-                       fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD),
-                       s_grect_circle_to_rect(p, S_RADIUS),
-                       GTextOverflowModeWordWrap,
-                       GTextAlignmentCenter,
-                       NULL);
+    GPoint p2 = GPoint(S_CENTER_X_2, S_CENTER_Y_2);
+    graphics_fill_circle(ctx, p2, S_RADIUS);
 
     // signal (red)
     graphics_context_set_fill_color(ctx, GColorRed);
-    p = GPoint(S_CENTER_X_3, S_CENTER_Y_3);
-    graphics_fill_circle(ctx, p, S_RADIUS);
+    GPoint p3 = GPoint(S_CENTER_X_3, S_CENTER_Y_3);
+    graphics_fill_circle(ctx, p3, S_RADIUS);
+
+#if 0
+    snprintf(str, 31, "%d", now_tm->tm_hour);
+    s_graphics_draw_text(ctx, str, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), s_grect_circle_to_rect(p1, S_RADIUS));
+
+    snprintf(str, 31, "%02d", now_tm->tm_min);
+    s_graphics_draw_text(ctx, str, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), s_grect_circle_to_rect(p2, S_RADIUS));
+
     snprintf(str, 31, "%02d", now_tm->tm_sec);
-    graphics_draw_text(ctx,
-                       str,
-                       fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD),
-                       s_grect_circle_to_rect(p, S_RADIUS),
-                       GTextOverflowModeWordWrap,
-                       GTextAlignmentCenter,
-                       NULL);
+    s_graphics_draw_text(ctx, str, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), s_grect_circle_to_rect(p3, S_RADIUS));
+#else
+    snprintf(str, 31, "%d/%d", now_tm->tm_mon+1, now_tm->tm_mday);
+    s_graphics_draw_text(ctx, str, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), s_grect_circle_to_rect(p1, S_RADIUS));
+    
+    snprintf(str, 31, "%d", now_tm->tm_hour);
+    s_graphics_draw_text(ctx, str, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), s_grect_circle_to_rect(p2, S_RADIUS));
+
+    snprintf(str, 31, "%02d", now_tm->tm_min);
+    s_graphics_draw_text(ctx, str, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), s_grect_circle_to_rect(p3, S_RADIUS));
+#endif
 }
     
 TimeLayer *time_layer_create(GRect window_bounds) {
