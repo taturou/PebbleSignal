@@ -9,6 +9,16 @@
     "resources": {
         "media": [
             {
+                "file": "images/signal_green_DarkGray.png",
+                "name": "IMAGE_SIGNAL_GREEN_DARKGRAY",
+                "type": "png"
+            },
+            {
+                "file": "images/signal_red_DarkGray.png",
+                "name": "IMAGE_SIGNAL_RED_DARKGRAY",
+                "type": "png"
+            },
+            {
                 "file": "images/signal_red_Red.png",
                 "name": "IMAGE_SIGNAL_RED_RED",
                 "type": "png"

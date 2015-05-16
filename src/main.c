@@ -1,4 +1,5 @@
 #include <pebble.h>
+#include "resource.h"
 #include "timebar_layer.h"
 #include "time_layer.h"
 
@@ -11,15 +12,8 @@ static TimeLayer *s_time_layer;
 static Layer *s_base_layer;
 static BitmapLayer *s_bmp_layer;
 static TimebarLayer *s_timebar_layer[2];
-static GBitmap *s_bmp[2][2];    // 0:green, 1:red
 static bool is_tick_timer_subscribe = false;
 static bool is_display_time = false;
-
-#define GREEN    (0)
-#define RED      (1)
-
-#define ON       (0)
-#define OFF      (1)
 
 #define MIN      (0)
 #define SEC      (1)
@@ -31,33 +25,15 @@ static void s_base_layer_update_proc(struct Layer *layer, GContext *ctx) {
     graphics_fill_rect(ctx, layer_get_bounds(layer), 0, GCornerNone);
 }
 
-static void s_update(int green_or_red, bool hidden) {
-    Layer *layer = bitmap_layer_get_layer(s_bmp_layer);
-
-    if (green_or_red == GREEN) {
-        if (hidden == false) {
-            if (bitmap_layer_get_bitmap(s_bmp_layer) != s_bmp[GREEN][ON]) {
-                bitmap_layer_set_bitmap(s_bmp_layer, s_bmp[GREEN][ON]);
-            }                
-        } else {
-            if (bitmap_layer_get_bitmap(s_bmp_layer) != s_bmp[GREEN][OFF]) {
-                bitmap_layer_set_bitmap(s_bmp_layer, s_bmp[GREEN][OFF]);
-            }                                
-        }
-    } else { /* RED */
-        if (hidden == false) {
-            if (bitmap_layer_get_bitmap(s_bmp_layer) != s_bmp[RED][ON]) {
-                bitmap_layer_set_bitmap(s_bmp_layer, s_bmp[RED][ON]);
-            }
-        } else {
-            if (bitmap_layer_get_bitmap(s_bmp_layer) != s_bmp[RED][OFF]) {
-                bitmap_layer_set_bitmap(s_bmp_layer, s_bmp[RED][OFF]);
-            }
-        }
-    }
+static void s_update(Signal signal, OnOff onoff) {
+    bitmap_layer_set_bitmap(s_bmp_layer, resource_get_bitmap(signal, onoff));
 }
     
 static void s_tick_handler(struct tm *tick_time, TimeUnits units_changed) {
+    if ((tick_time->tm_min == 0) && (tick_time->tm_sec == 0)) {
+        vibes_short_pulse();
+    }
+    
 #if DISPLAY_TIMEBAR_HOUR_AND_MIN
     if ((tick_time->tm_min % 2) == 0) {
         if (tick_time->tm_sec < 59) {
@@ -65,8 +41,8 @@ static void s_tick_handler(struct tm *tick_time, TimeUnits units_changed) {
         } else {
             s_update(RED, true);
         }
-        timebar_layer_set_bar_color(s_timebar_layer[MIN], GColorRed, GColorBulgarianRose);
-        timebar_layer_set_bar_color(s_timebar_layer[SEC], GColorRed, GColorBulgarianRose);
+        timebar_layer_set_signal(s_timebar_layer[MIN], Red);
+        timebar_layer_set_signal(s_timebar_layer[SEC], Red);
         timebar_layer_set_bar_height(s_timebar_layer[MIN], 1);
         timebar_layer_set_bar_height(s_timebar_layer[SEC], 1);
     } else {
@@ -80,8 +56,8 @@ static void s_tick_handler(struct tm *tick_time, TimeUnits units_changed) {
                 s_update(GREEN, true);
             }
         }
-        timebar_layer_set_bar_color(s_timebar_layer[MIN], GColorJaegerGreen, GColorMidnightGreen);
-        timebar_layer_set_bar_color(s_timebar_layer[SEC], GColorJaegerGreen, GColorMidnightGreen);
+        timebar_layer_set_signal(s_timebar_layer[MIN], Green);
+        timebar_layer_set_signal(s_timebar_layer[SEC], Green);
         timebar_layer_set_bar_height(s_timebar_layer[MIN], 1);
         timebar_layer_set_bar_height(s_timebar_layer[SEC], 2);
     }
@@ -90,27 +66,27 @@ static void s_tick_handler(struct tm *tick_time, TimeUnits units_changed) {
 #else /* ! DISPLAY_TIMEBAR_HOUR_AND_MIN */
     if ((tick_time->tm_min % 2) == 0) {
         if (tick_time->tm_sec < 59) {
-            s_update(RED, false);
+            s_update(Red, On);
         } else {
-            s_update(RED, true);
+            s_update(Red, Off);
         }
-        timebar_layer_set_bar_color(s_timebar_layer[0], GColorRed, GColorBulgarianRose);
-        timebar_layer_set_bar_color(s_timebar_layer[1], GColorRed, GColorBulgarianRose);
+        timebar_layer_set_signal(s_timebar_layer[0], Red);
+        timebar_layer_set_signal(s_timebar_layer[1], Red);
         timebar_layer_set_bar_height(s_timebar_layer[0], 5);
         timebar_layer_set_bar_height(s_timebar_layer[1], 5);
     } else {
         if (tick_time->tm_sec < 45) {
-            s_update(GREEN, false);
+            s_update(Green, On);
 
         } else {
             if ((tick_time->tm_sec % 2) == 0) {
-                s_update(GREEN, false);
+                s_update(Green, On);
             } else {
-                s_update(GREEN, true);
+                s_update(Green, Off);
             }
         }
-        timebar_layer_set_bar_color(s_timebar_layer[0], GColorJaegerGreen, GColorMidnightGreen);
-        timebar_layer_set_bar_color(s_timebar_layer[1], GColorJaegerGreen, GColorMidnightGreen);
+        timebar_layer_set_signal(s_timebar_layer[0], Green);
+        timebar_layer_set_signal(s_timebar_layer[1], Green);
         timebar_layer_set_bar_height(s_timebar_layer[0], 7);
         timebar_layer_set_bar_height(s_timebar_layer[1], 7);
     }
@@ -190,6 +166,8 @@ static void s_window_load(Window *window) {
     Layer *window_layer = window_get_root_layer(window);
     GRect window_bounds = layer_get_bounds(window_layer);
 
+    resource_alloc();
+    
     // create time-layer
     s_time_layer = time_layer_create(window_bounds);
     layer_add_child(window_layer, time_layer_get_layer(s_time_layer));
@@ -199,17 +177,11 @@ static void s_window_load(Window *window) {
     s_base_layer = layer_create(window_bounds);
     layer_set_update_proc(s_base_layer, s_base_layer_update_proc);
     layer_add_child(window_layer, s_base_layer);
-    
-    // create bitmap
-    s_bmp[GREEN][ON] = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SIGNAL_GREEN_JAEGERGREEN);
-    s_bmp[GREEN][OFF] = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SIGNAL_GREEN_MIDNIGHTGREEN);
-    s_bmp[RED][ON] = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SIGNAL_RED_RED);
-    s_bmp[RED][OFF] = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SIGNAL_RED_BULGARIANROSE);
 
     // create bitmap-layer
     s_bmp_layer = bitmap_layer_create(window_bounds);
     bitmap_layer_set_background_color(s_bmp_layer, GColorBlack);
-    bitmap_layer_set_bitmap(s_bmp_layer, s_bmp[GREEN][ON]);
+    bitmap_layer_set_bitmap(s_bmp_layer, resource_get_bitmap(Green, On));
     layer_add_child(s_base_layer, bitmap_layer_get_layer(s_bmp_layer));
 
     // create time-layer
@@ -220,7 +192,7 @@ static void s_window_load(Window *window) {
     layer_add_child(s_base_layer, timebar_layer_get_layer(s_timebar_layer[1]));
     
     // start tick-timer
-    s_update(GREEN, false);
+    s_update(Green, On);
     tick_timer_service_subscribe(SECOND_UNIT, s_tick_handler);
     is_tick_timer_subscribe = true;
     
@@ -242,14 +214,11 @@ static void s_window_unload(Window *window) {
     
     bitmap_layer_destroy(s_bmp_layer);
     
-    gbitmap_destroy(s_bmp[GREEN][ON]);
-    gbitmap_destroy(s_bmp[GREEN][OFF]);
-    gbitmap_destroy(s_bmp[RED][ON]);
-    gbitmap_destroy(s_bmp[RED][OFF]);
-    
     layer_destroy(s_base_layer);
     
     time_layer_destory(s_time_layer);
+    
+    resource_free();
 }
 
 static void s_init(void) {
