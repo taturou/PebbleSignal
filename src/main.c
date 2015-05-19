@@ -27,7 +27,7 @@ static void s_tick_handler(struct tm *tick_time, TimeUnits units_changed) {
 }
 
 static void s_accel_tap_handler(AccelAxisType axis, int32_t direction) {
-    siangl_layer_display_time(s_signal_layer, layer_get_bounds(time_layer_get_layer(s_time_layer)).size.h);
+    siangl_layer_display_time(s_signal_layer);
 }
 
 static void s_window_load(Window *window) {
@@ -42,6 +42,7 @@ static void s_window_load(Window *window) {
     
     // create signal-layer
     s_signal_layer = signal_layer_create(window_bounds);
+    signal_layer_set_glance_height(s_signal_layer, layer_get_bounds(time_layer_get_layer(s_time_layer)).size.h);
     layer_add_child(window_layer, signal_layer_get_layer(s_signal_layer));
     
     // start tick-timer
@@ -52,7 +53,7 @@ static void s_window_load(Window *window) {
     accel_tap_service_subscribe(s_accel_tap_handler);
     
     // display time
-    siangl_layer_display_time(s_signal_layer, layer_get_bounds(time_layer_get_layer(s_time_layer)).size.h);
+    siangl_layer_display_time(s_signal_layer);
 }
 
 static void s_window_unload(Window *window) {

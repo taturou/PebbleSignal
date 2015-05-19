@@ -12,3 +12,4 @@ void timebar_layer_set_hidden(TimebarLayer *timebar_layer, bool hidden);
 void timebar_layer_set_bar_height(TimebarLayer *timebar_layer, uint16_t height);
 void timebar_layer_set_signal(TimebarLayer *timebar_layer, Signal signal);
 void timebar_layer_set_value(TimebarLayer *timebar_layer, int value);
+void timebar_layer_set_onoff(TimebarLayer *timebar_layer, OnOff onoff);

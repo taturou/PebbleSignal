@@ -4,8 +4,12 @@
 #include "timebar_layer.h"
 
 /* configurations */
-#define DISPLAY_TIMEBAR_HOUR_AND_MIN (1)
-#define DELAY_UP_TO_DOWN             (4000)
+#define VIBES_EACH_HOUR              (1)
+#define DISPLAY_TIMEBAR_HOUR_AND_MIN (0)
+
+#define GLANCE_DELAY_UP_TO_DOWN      (4000)
+#define GLANCE_DURATION              (250)
+#define SIGNAL_DURATION              (150)
 
 /* code */
 #define NUM_TIMEBAR (2)
@@ -15,10 +19,15 @@
 #define ORIGIN_X_2  (124)
 #define ORIGIN_Y_2  (26)
 
+#define NUM_BITMAP_LAYER (2)
+
 struct SignalLayer {
     Layer *layer;
-    BitmapLayer *bitmap_layer;
+    Layer *bitmap_base_layer;
+    BitmapLayer *bitmap_layer[NUM_BITMAP_LAYER]; // 0:Green, 1:Red
     TimebarLayer *timebar_layer[NUM_TIMEBAR];
+    uint16_t glance_height;
+    Signal signal;
     bool display_time;
 };
 
@@ -27,14 +36,14 @@ static void s_layer_update_proc(struct Layer *layer, GContext *ctx) {
     graphics_fill_rect(ctx, layer_get_bounds(layer), 0, GCornerNone);
 }
 
-static void s_down_animation_stopped_handler(Animation *hide_animation, bool finished, void *context) {
+static void s_glance_down_animation_stopped_handler(Animation *hide_animation, bool finished, void *context) {
     SignalLayer *signal_layer = (SignalLayer*)context;
 
     animation_destroy(hide_animation);
     signal_layer->display_time = false;
 }
 
-static void s_up_animation_stopped_handler(Animation *show_animation, bool finished, void *context) {
+static void s_glance_up_animation_stopped_handler(Animation *show_animation, bool finished, void *context) {
     SignalLayer *signal_layer = (SignalLayer*)context;
     Layer *layer = signal_layer->layer;
 
@@ -51,12 +60,173 @@ static void s_up_animation_stopped_handler(Animation *show_animation, bool finis
     PropertyAnimation *hide_animation = property_animation_create_layer_frame(layer, &from_frame, &to_frame);
     animation_set_handlers(property_animation_get_animation(hide_animation),
                            (AnimationHandlers){.started = NULL,
-                                               .stopped = s_down_animation_stopped_handler},
+                                               .stopped = s_glance_down_animation_stopped_handler},
                            (void*)context);
-    animation_set_delay(property_animation_get_animation(hide_animation), DELAY_UP_TO_DOWN);
+    animation_set_delay(property_animation_get_animation(hide_animation), GLANCE_DELAY_UP_TO_DOWN);
+    animation_set_duration(property_animation_get_animation(hide_animation), GLANCE_DURATION);
     animation_set_curve(property_animation_get_animation(hide_animation), AnimationCurveEaseOut);
     animation_schedule(property_animation_get_animation(hide_animation));
 }
+
+static void s_glance(SignalLayer *signal_layer) {
+    Layer *layer = signal_layer->layer;
+
+    if (signal_layer->display_time == false) {
+        signal_layer->display_time = true;
+
+        GRect from_frame = layer_get_frame(layer);
+        GRect to_frame = GRect(from_frame.origin.x,
+                               signal_layer->glance_height * -1,
+                               from_frame.size.w,
+                               from_frame.size.h);
+    
+        PropertyAnimation *show_animation = property_animation_create_layer_frame(layer, &from_frame, &to_frame);
+        animation_set_handlers(property_animation_get_animation(show_animation),
+                               (AnimationHandlers){.started = NULL,
+                                                   .stopped = s_glance_up_animation_stopped_handler},
+                               (void*)signal_layer);
+        animation_set_curve(property_animation_get_animation(show_animation), AnimationCurveEaseOut);
+        animation_set_duration(property_animation_get_animation(show_animation), GLANCE_DURATION);
+        animation_schedule(property_animation_get_animation(show_animation));
+    }
+}
+
+static void s_set_onoff(SignalLayer *signal_layer, OnOff onoff) {
+    bitmap_layer_set_bitmap(signal_layer->bitmap_layer[signal_layer->signal], resource_get_bitmap(signal_layer->signal, onoff));
+}
+
+static void s_signal_animation_stopped_handler(Animation *animation, bool finished, void *context) {
+    SignalLayer *signal_layer = (SignalLayer*)context;
+    TimebarLayer **timebar_layer = signal_layer->timebar_layer;
+
+    // destroy animation
+    animation_destroy(animation);
+    
+    // set to Off
+    s_set_onoff(signal_layer, On);
+    timebar_layer_set_onoff(timebar_layer[0], On);
+    timebar_layer_set_onoff(timebar_layer[1], On);
+}
+
+static void s_set_signal(SignalLayer *signal_layer, Signal signal) {
+    TimebarLayer **timebar_layer = signal_layer->timebar_layer;
+
+    if (signal_layer->signal != signal) {
+        signal_layer->signal = signal;
+
+        // set to Off
+        s_set_onoff(signal_layer, Off);
+        timebar_layer_set_onoff(timebar_layer[0], Off);
+        timebar_layer_set_onoff(timebar_layer[1], Off);
+
+        // calc frame
+        GRect frame = layer_get_bounds(signal_layer->bitmap_base_layer);
+        if (signal == Green) {
+            frame.origin.y = (frame.size.h / 2) * -1;
+        } else {
+            /* do nothing */
+        }
+
+        // animation
+        PropertyAnimation *animation = property_animation_create_layer_frame(signal_layer->bitmap_base_layer, NULL, &frame);
+        animation_set_handlers(property_animation_get_animation(animation),
+                               (AnimationHandlers){.started = NULL,
+                                                   .stopped = s_signal_animation_stopped_handler},
+                               (void*)signal_layer);
+        animation_set_duration(property_animation_get_animation(animation), SIGNAL_DURATION);
+        animation_schedule(property_animation_get_animation(animation));
+    }
+}
+
+#if DISPLAY_TIMEBAR_HOUR_AND_MIN
+static void s_tick_display_HourAndMin(SignalLayer *signal_layer, struct tm *tick_time, TimeUnits units_changed) {
+    TimebarLayer **timebar_layer = signal_layer->timebar_layer;
+
+    if ((tick_time->tm_min % 2) == 0) {
+        s_set_signal(signal_layer, Red);
+        if (tick_time->tm_sec == 0) {
+            /* do nothing for animation */
+        } else {
+            s_set_onoff(signal_layer, On);
+            timebar_layer_set_onoff(timebar_layer[0], On);
+            timebar_layer_set_onoff(timebar_layer[1], On);
+        }
+
+        timebar_layer_set_signal(timebar_layer[0], Red);
+        timebar_layer_set_signal(timebar_layer[1], Red);
+        timebar_layer_set_bar_height(timebar_layer[0], 1);
+        timebar_layer_set_bar_height(timebar_layer[1], 1);
+    } else {
+        s_set_signal(signal_layer, Green);
+        if (tick_time->tm_sec == 0) {
+            /* do nothing for animation */
+        } else {
+            if (tick_time->tm_sec < 40) {
+                s_set_onoff(signal_layer, On);
+            } else {
+                if ((tick_time->tm_sec % 2) == 0) {
+                    s_set_onoff(signal_layer, On);
+                } else {
+                    s_set_onoff(signal_layer, Off);
+                }
+            }
+            timebar_layer_set_onoff(timebar_layer[0], On);
+            timebar_layer_set_onoff(timebar_layer[1], On);
+        } 
+        
+        timebar_layer_set_signal(timebar_layer[0], Green);
+        timebar_layer_set_signal(timebar_layer[1], Green);
+        timebar_layer_set_bar_height(timebar_layer[0], 1);
+        timebar_layer_set_bar_height(timebar_layer[1], 2);
+    }
+    timebar_layer_set_value(timebar_layer[0], tick_time->tm_min);
+    timebar_layer_set_value(timebar_layer[1], tick_time->tm_sec);
+}
+#else /* ! DISPLAY_TIMEBAR_HOUR_AND_MIN */
+static void s_tick_display_signal(SignalLayer *signal_layer, struct tm *tick_time, TimeUnits units_changed) {
+    TimebarLayer **timebar_layer = signal_layer->timebar_layer;
+
+    if ((tick_time->tm_min % 2) == 0) {
+        s_set_signal(signal_layer, Red);
+        if (tick_time->tm_sec == 0) {
+            /* do nothing for animation */
+        } else {
+            s_set_onoff(signal_layer, On);
+            timebar_layer_set_onoff(timebar_layer[0], On);
+            timebar_layer_set_onoff(timebar_layer[1], On);
+        }
+
+        timebar_layer_set_signal(timebar_layer[0], Red);
+        timebar_layer_set_signal(timebar_layer[1], Red);
+        timebar_layer_set_bar_height(timebar_layer[0], 5);
+        timebar_layer_set_bar_height(timebar_layer[1], 5);
+    } else {
+        s_set_signal(signal_layer, Green);
+        if (tick_time->tm_sec == 0) {
+            /* do nothing for animation */
+        } else {
+            if (tick_time->tm_sec < 45) {
+                s_set_onoff(signal_layer, On);
+            } else {
+                if ((tick_time->tm_sec % 2) == 0) {
+                    s_set_onoff(signal_layer, On);
+                } else {
+                    s_set_onoff(signal_layer, Off);
+                }
+            }
+            timebar_layer_set_onoff(timebar_layer[0], On);
+            timebar_layer_set_onoff(timebar_layer[1], On);
+        }
+
+        timebar_layer_set_signal(timebar_layer[0], Green);
+        timebar_layer_set_signal(timebar_layer[1], Green);
+        timebar_layer_set_bar_height(timebar_layer[0], 7);
+        timebar_layer_set_bar_height(timebar_layer[1], 7);
+    }
+    timebar_layer_set_value(timebar_layer[0], tick_time->tm_sec / 3);
+    timebar_layer_set_value(timebar_layer[1], tick_time->tm_sec / 3);
+}
+#endif /* ! DISPLAY_TIMEBAR_HOUR_AND_MIN */
 
 SignalLayer *signal_layer_create(GRect window_bounds) {
     SignalLayer *signal_layer = NULL;
@@ -66,11 +236,31 @@ SignalLayer *signal_layer_create(GRect window_bounds) {
         // setup layer
         layer_set_update_proc(layer, s_layer_update_proc);
     
+        // create bitmap-base-layer
+        GRect bitmap_base_layer_bounds = GRect(window_bounds.origin.x,
+                                               window_bounds.origin.y,
+                                               window_bounds.size.w,
+                                               window_bounds.size.h * 2);
+        Layer *bitmap_base_layer = layer_create(bitmap_base_layer_bounds);
+        layer_add_child(layer, bitmap_base_layer);
+
         // create bitmap-layer
-        BitmapLayer *bitmap_layer = bitmap_layer_create(window_bounds);
-        bitmap_layer_set_background_color(bitmap_layer, GColorBlack);
-        bitmap_layer_set_bitmap(bitmap_layer, resource_get_bitmap(Green, On));
-        layer_add_child(layer, bitmap_layer_get_layer(bitmap_layer));
+        BitmapLayer *bitmap_layer[NUM_BITMAP_LAYER];
+
+        GRect red_bitmap_layer_frame = window_bounds;
+        bitmap_layer[Red] = bitmap_layer_create(red_bitmap_layer_frame);
+        bitmap_layer_set_background_color(bitmap_layer[Red], GColorBlack);
+        bitmap_layer_set_bitmap(bitmap_layer[Red], resource_get_bitmap(Red, On));
+        layer_add_child(bitmap_base_layer, bitmap_layer_get_layer(bitmap_layer[Red]));
+        
+        GRect green_bitmap_layer_frame = GRect(window_bounds.origin.x,
+                                               window_bounds.size.h,
+                                               window_bounds.size.w,
+                                               window_bounds.size.h);
+        bitmap_layer[Green] = bitmap_layer_create(green_bitmap_layer_frame);
+        bitmap_layer_set_background_color(bitmap_layer[Green], GColorBlack);
+        bitmap_layer_set_bitmap(bitmap_layer[Green], resource_get_bitmap(Green, On));
+        layer_add_child(bitmap_base_layer, bitmap_layer_get_layer(bitmap_layer[Green]));
     
         // create time-layer
         TimebarLayer *timebar_layer[NUM_TIMEBAR];
@@ -87,11 +277,20 @@ SignalLayer *signal_layer_create(GRect window_bounds) {
         // set members
         signal_layer = (SignalLayer*)layer_get_data(layer);
         signal_layer->layer = layer;
-        signal_layer->bitmap_layer = bitmap_layer;
-        signal_layer->display_time = false;
+        for (int i = 0; i < NUM_BITMAP_LAYER; i++) {
+            signal_layer->bitmap_layer[i] = bitmap_layer[i];
+        }
+        signal_layer->bitmap_base_layer = bitmap_base_layer;
         for (int i = 0; i < NUM_TIMEBAR; i++) {
             signal_layer->timebar_layer[i] = timebar_layer[i];
         }        
+        signal_layer->glance_height = window_bounds.size.h;
+        signal_layer->signal = Red;
+        signal_layer->display_time = false;
+        
+        // diaplay
+        s_set_signal(signal_layer, Green);
+        s_set_onoff(signal_layer, On);
     }
     return signal_layer;
 }
@@ -100,8 +299,11 @@ void signal_layer_destroy(SignalLayer *signal_layer) {
     for (int i = 0; i < NUM_TIMEBAR; i++) {
         timebar_layer_destroy(signal_layer->timebar_layer[i]);
     }
-    
-    bitmap_layer_destroy(signal_layer->bitmap_layer);
+
+    for (int i = 0; i < NUM_BITMAP_LAYER; i++) {
+        bitmap_layer_destroy(signal_layer->bitmap_layer[i]);
+    }
+    layer_destroy(signal_layer->bitmap_base_layer);
     
     layer_destroy(signal_layer->layer);
 }
@@ -110,92 +312,24 @@ Layer *signal_layer_get_layer(SignalLayer *signal_layer) {
     return signal_layer->layer;    
 }
 
-void signal_layer_tick_handler(SignalLayer *signal_layer, struct tm *tick_time, TimeUnits units_changed) {
-    BitmapLayer *bitmap_layer = signal_layer->bitmap_layer;
-    TimebarLayer **timebar_layer = signal_layer->timebar_layer;
+void signal_layer_set_glance_height(SignalLayer *signal_layer, uint16_t height) {
+    signal_layer->glance_height = height;
+}
 
+void signal_layer_tick_handler(SignalLayer *signal_layer, struct tm *tick_time, TimeUnits units_changed) {
+#if VIBES_EACH_HOUR
     if ((tick_time->tm_min == 0) && (tick_time->tm_sec == 0)) {
         vibes_short_pulse();
     }
-    
-#if DISPLAY_TIMEBAR_HOUR_AND_MIN
-    if ((tick_time->tm_min % 2) == 0) {
-        if (tick_time->tm_sec < 59) {
-            bitmap_layer_set_bitmap(bitmap_layer, resource_get_bitmap(Red, On));
-        } else {
-            bitmap_layer_set_bitmap(bitmap_layer, resource_get_bitmap(Red, Off));
-        }
-        timebar_layer_set_signal(timebar_layer[0], Red);
-        timebar_layer_set_signal(timebar_layer[1], Red);
-        timebar_layer_set_bar_height(timebar_layer[0], 1);
-        timebar_layer_set_bar_height(timebar_layer[1], 1);
-    } else {
-        if (tick_time->tm_sec < 40) {
-            bitmap_layer_set_bitmap(bitmap_layer, resource_get_bitmap(Green, On));
+#endif
 
-        } else {
-            if ((tick_time->tm_sec % 2) == 0) {
-                bitmap_layer_set_bitmap(bitmap_layer, resource_get_bitmap(Green, On));
-            } else {
-                bitmap_layer_set_bitmap(bitmap_layer, resource_get_bitmap(Green, Off));
-            }
-        }
-        timebar_layer_set_signal(timebar_layer[0], Green);
-        timebar_layer_set_signal(timebar_layer[1], Green);
-        timebar_layer_set_bar_height(timebar_layer[0], 1);
-        timebar_layer_set_bar_height(timebar_layer[1], 2);
-    }
-    timebar_layer_set_value(timebar_layer[0], tick_time->tm_min);
-    timebar_layer_set_value(timebar_layer[1], tick_time->tm_sec);
+#if DISPLAY_TIMEBAR_HOUR_AND_MIN
+    s_tick_display_HourAndMin(signal_layer, tick_time, units_changed);
 #else /* ! DISPLAY_TIMEBAR_HOUR_AND_MIN */
-    if ((tick_time->tm_min % 2) == 0) {
-        if (tick_time->tm_sec < 59) {
-            bitmap_layer_set_bitmap(bitmap_layer, resource_get_bitmap(Red, On));
-        } else {
-            bitmap_layer_set_bitmap(bitmap_layer, resource_get_bitmap(Red, Off));
-        }
-        timebar_layer_set_signal(timebar_layer[0], Red);
-        timebar_layer_set_signal(timebar_layer[1], Red);
-        timebar_layer_set_bar_height(timebar_layer[0], 5);
-        timebar_layer_set_bar_height(timebar_layer[1], 5);
-    } else {
-        if (tick_time->tm_sec < 45) {
-            bitmap_layer_set_bitmap(bitmap_layer, resource_get_bitmap(Green, On));
-        } else {
-            if ((tick_time->tm_sec % 2) == 0) {
-                bitmap_layer_set_bitmap(bitmap_layer, resource_get_bitmap(Green, On));
-            } else {
-                bitmap_layer_set_bitmap(bitmap_layer, resource_get_bitmap(Green, Off));
-            }
-        }
-        timebar_layer_set_signal(timebar_layer[0], Green);
-        timebar_layer_set_signal(timebar_layer[1], Green);
-        timebar_layer_set_bar_height(timebar_layer[0], 7);
-        timebar_layer_set_bar_height(timebar_layer[1], 7);
-    }
-    timebar_layer_set_value(timebar_layer[0], tick_time->tm_sec / 3);
-    timebar_layer_set_value(timebar_layer[1], tick_time->tm_sec / 3);
+    s_tick_display_signal(signal_layer, tick_time, units_changed);
 #endif /* ! DISPLAY_TIMEBAR_HOUR_AND_MIN */
 }
 
-void siangl_layer_display_time(SignalLayer *signal_layer, uint16_t size_h) {
-    Layer *layer = signal_layer->layer;
-
-    if (signal_layer->display_time == false) {
-        signal_layer->display_time = true;
-
-        GRect from_frame = layer_get_frame(layer);
-        GRect to_frame = GRect(from_frame.origin.x,
-                               size_h * -1,
-                               from_frame.size.w,
-                               from_frame.size.h);
-    
-        PropertyAnimation *show_animation = property_animation_create_layer_frame(layer, &from_frame, &to_frame);
-        animation_set_handlers(property_animation_get_animation(show_animation),
-                               (AnimationHandlers){.started = NULL,
-                                                   .stopped = s_up_animation_stopped_handler},
-                               (void*)signal_layer);
-        animation_set_curve(property_animation_get_animation(show_animation), AnimationCurveEaseIn);
-        animation_schedule(property_animation_get_animation(show_animation));
-    }
+void siangl_layer_display_time(SignalLayer *signal_layer) {
+    s_glance(signal_layer);
 }

@@ -6,6 +6,7 @@ struct TimebarLayer {
     int value;
     uint16_t bar_height;
     Signal signal;
+    OnOff onoff;
 };
 
 #define WIDTH    (15)
@@ -20,15 +21,23 @@ static void s_layer_update_proc(struct Layer *layer, GContext *ctx) {
     
     int max = HEIGHT / (timebar_layer->bar_height + 1);
     
-    graphics_context_set_fill_color(ctx, resource_get_color(timebar_layer->signal, Off));
-    for (int i = 0; i < timebar_layer->value; i++) {
-        uint16_t y = i * (timebar_layer->bar_height + 1);
-        graphics_fill_rect(ctx, GRect(0, y, WIDTH, timebar_layer->bar_height), 0, GCornerNone);
-    }
-    graphics_context_set_fill_color(ctx, resource_get_color(timebar_layer->signal, On));
-    for (int i = timebar_layer->value; i < max; i++) {
-        uint16_t y = i * (timebar_layer->bar_height + 1);
-        graphics_fill_rect(ctx, GRect(0, y, WIDTH, timebar_layer->bar_height), 0, GCornerNone);
+    if (timebar_layer->onoff == On) {
+        graphics_context_set_fill_color(ctx, resource_get_color(timebar_layer->signal, Off));
+        for (int i = 0; i < timebar_layer->value; i++) {
+            uint16_t y = i * (timebar_layer->bar_height + 1);
+            graphics_fill_rect(ctx, GRect(0, y, WIDTH, timebar_layer->bar_height), 0, GCornerNone);
+        }
+        graphics_context_set_fill_color(ctx, resource_get_color(timebar_layer->signal, On));
+        for (int i = timebar_layer->value; i < max; i++) {
+            uint16_t y = i * (timebar_layer->bar_height + 1);
+            graphics_fill_rect(ctx, GRect(0, y, WIDTH, timebar_layer->bar_height), 0, GCornerNone);
+        }
+    } else {
+        graphics_context_set_fill_color(ctx, resource_get_color(timebar_layer->signal, Off));
+        for (int i = 0; i < max; i++) {
+            uint16_t y = i * (timebar_layer->bar_height + 1);
+            graphics_fill_rect(ctx, GRect(0, y, WIDTH, timebar_layer->bar_height), 0, GCornerNone);
+        }
     }
 }
     
@@ -42,6 +51,7 @@ TimebarLayer *timebar_layer_create(GPoint origin) {
         timebar_layer->value = 0;
         timebar_layer->bar_height = 1;
         timebar_layer->signal = Green;
+        timebar_layer->onoff = On;
         layer_set_update_proc(timebar_layer->layer, s_layer_update_proc);
     }
     return timebar_layer;
@@ -76,6 +86,13 @@ void timebar_layer_set_signal(TimebarLayer *timebar_layer, Signal signal) {
 void timebar_layer_set_value(TimebarLayer *timebar_layer, int value) {
     if (timebar_layer->value != value) {
         timebar_layer->value = value;
+        layer_mark_dirty(timebar_layer->layer);
+    }
+}
+
+void timebar_layer_set_onoff(TimebarLayer *timebar_layer, OnOff onoff) {
+    if (timebar_layer->onoff != onoff) {
+        timebar_layer->onoff = onoff;
         layer_mark_dirty(timebar_layer->layer);
     }
 }
