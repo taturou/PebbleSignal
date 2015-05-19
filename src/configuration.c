@@ -32,38 +32,62 @@ typedef struct ConfigHandlersData ConfigHandlersData;
 
 static size_t s_get_dict_buffer_size(void) {
     return (size_t)dict_calc_buffer_size(NUM_KEY_CONFIG,
-                                         sizeof(int8_t),   /* vibes_each_hour */
-                                         sizeof(int32_t),  /* timebar_pattern */
-                                         sizeof(int32_t)); /* time_pattern */
+                                         sizeof(int8_t),   // vibes_each_hour
+                                         sizeof(int32_t),  // timebar_pattern
+                                         sizeof(int32_t)); // time_pattern
 }
 
-static ConfigData *s_get_config_data(void) {
+static ConfigData *s_config_get_data(void) {
     static ConfigData data;
     return &data;
 }
 
-static void s_init_config_data(void) {
-    ConfigData *data = s_get_config_data();
+static void s_config_init_data(void) {
+    ConfigData *data = s_config_get_data();
     data->vibes_each_hour = DEFAULT_VALUE_CONF_VIBES_EACH_HOUR;
     data->timebar_pattern = DEFAULT_VALUE_CONF_TIMEBAR_PATTERN;
     data->time_pattern = DEFAULT_VALUE_CONF_TIME_PATTERN;
 }
 
-static ConfigHandlersData *s_get_config_handlers_data(void) {
+static ConfigHandlersData *s_config_get_handlers(void) {
     static ConfigHandlersData data;
     return &data;
 }
 
-static void s_init_config_handlers_data(void) {
-    ConfigHandlersData *data = s_get_config_handlers_data();
+static void s_config_init_handlers(void) {
+    ConfigHandlersData *data = s_config_get_handlers();
     data->callback.updated = NULL;
     data->context = NULL;
+}
+
+static void s_config_read_from_dictionary(DictionaryIterator *iter) {
+    s_config_init_data();
+    ConfigData *data = s_config_get_data();
+
+    Tuple *tuple = dict_read_first(iter);
+    while (tuple != NULL) {
+        switch (tuple->key) {
+        case KEY_CONF_VIBES_EACH_HOUR:
+            data->vibes_each_hour = (bool)tuple->value->int8;
+            break;
+        case KEY_CONF_TIMEBAR_PATTERN:
+            data->timebar_pattern = (TimebarPattern)tuple->value->int32;
+            break;
+        case KEY_CONF_TIME_PATTERN:
+            data->time_pattern = (TimePattern)tuple->value->int32;
+            break;
+        default:
+            /* do nothing */
+            break;
+        }
+        tuple = dict_read_next(iter);
+    }
 }
 
 static void s_persist_clear(void) {
     (void)persist_delete(STORAGE_KEY_CONFIG_VERSION);
     (void)persist_delete(STORAGE_KEY_V1_DICTIONARY);
-    s_init_config_data();
+    s_config_init_data();
 }
 
 static void s_persist_read_v1(void) {
@@ -74,28 +98,9 @@ static void s_persist_read_v1(void) {
         uint8_t buffer[buffer_size];
         
         if (persist_read_data(STORAGE_KEY_V1_DICTIONARY, buffer, buffer_size) == (int)buffer_size) {
-            s_init_config_data();
-            ConfigData *data = s_get_config_data();
-
             DictionaryIterator iter;
-            Tuple *tuple = dict_read_begin_from_buffer(&iter, buffer, buffer_size);
-            while (tuple != NULL) {
-                switch (tuple->key) {
-                case KEY_CONF_VIBES_EACH_HOUR:
-                    data->vibes_each_hour = (bool)tuple->value->int8;
-                    break;
-                case KEY_CONF_TIMEBAR_PATTERN:
-                    data->timebar_pattern = (TimebarPattern)tuple->value->int32;
-                    break;
-                case KEY_CONF_TIME_PATTERN:
-                    data->time_pattern = (TimePattern)tuple->value->int32;
-                    break;
-                default:
-                    /* do nothing */
-                    break;
-                }
-                tuple = dict_read_next(&iter);
-            }
+            (void)dict_read_begin_from_buffer(&iter, buffer, buffer_size);
+            s_config_read_from_dictionary(&iter);
             success = true;
         }
     }
@@ -119,23 +124,66 @@ static void s_persist_migrate(void) {
         break;
     }
 }
-    
+
+static void s_app_message_inbox_received_callback(DictionaryIterator *iter, void *context) {
+    s_config_read_from_dictionary(iter);
+}
+
+static void s_app_message_inbox_dropped_callback(AppMessageResult reason, void *context) {
+    /* do nothing */
+}
+
+static void s_app_message_outbox_failed_callback(DictionaryIterator *iterator, AppMessageResult reason, void *context) {
+    /* do nothing */
+}
+
+static void s_app_message_outbox_sent_callback(DictionaryIterator *iterator, void *context) {
+    /* do nothing */
+}
+
+static void s_app_message_outbox_send(void) {
+    ConfigData *data = s_config_get_data();
+
+    DictionaryIterator *iter;
+    app_message_outbox_begin(&iter);
+    dict_write_int8(iter, KEY_CONF_VIBES_EACH_HOUR, (int8_t)data->vibes_each_hour);
+    dict_write_int32(iter, KEY_CONF_TIMEBAR_PATTERN, (int32_t)data->timebar_pattern);
+    dict_write_int32(iter, KEY_CONF_TIME_PATTERN, (int32_t)data->time_pattern);
+    app_message_outbox_send();
+}
+
+static void s_app_message_set_callback(void) {
+    // Register callbacks
+    app_message_register_inbox_received(s_app_message_inbox_received_callback);
+    app_message_register_inbox_dropped(s_app_message_inbox_dropped_callback);
+    app_message_register_outbox_failed(s_app_message_outbox_failed_callback);
+    app_message_register_outbox_sent(s_app_message_outbox_sent_callback);
+
+    // Open AppMessage
+    app_message_open(app_message_inbox_size_maximum(), app_message_outbox_size_maximum());
+}
+
 void configuration_load(void) {
-    s_init_config_data();
-    s_init_config_handlers_data();
+    // init data
+    s_config_init_data();
+    s_config_init_handlers();
     s_persist_migrate();
+
+    // set app-message callback
+    s_app_message_set_callback();
     
-    ConfigData *data = s_get_config_data();
+    // send configuration to iPhone
+    s_app_message_outbox_send();
 }
 
 void configuration_set_handlers(ConfigurationHandlers callback, void *context) {
-    ConfigHandlersData *data = s_get_config_handlers_data();
+    ConfigHandlersData *data = s_config_get_handlers();
     data->callback = callback;
     data->context = context;
 }
 
 void *configuration_get(Configurations config) {
-    ConfigData *data = s_get_config_data();
+    ConfigData *data = s_config_get_data();
     void *ret = NULL;
 
     switch (config) {
