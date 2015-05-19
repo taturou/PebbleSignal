@@ -1,4 +1,5 @@
 #include <pebble.h>
+#include "configuration.h"
 #include "resource.h"
 #include "time_layer.h"
 #include "signal_layer.h"
@@ -22,6 +23,13 @@ static void s_click_config_provider(void *context) {
     window_single_click_subscribe(BUTTON_ID_DOWN, s_down_click_handler);
 }
 
+static void s_config_updated_handler(void *context) {
+    (void)context;
+
+    time_layer_config_updated(s_time_layer);
+    signal_layer_config_updated(s_signal_layer);
+}
+
 static void s_tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     signal_layer_tick_handler(s_signal_layer, tick_time, units_changed);
 }
@@ -34,6 +42,7 @@ static void s_window_load(Window *window) {
     Layer *window_layer = window_get_root_layer(window);
     GRect window_bounds = layer_get_bounds(window_layer);
 
+    configuration_load();
     resource_alloc();
     
     // create time-layer
@@ -51,6 +60,14 @@ static void s_window_load(Window *window) {
     // start tap-service
     accel_service_set_sampling_rate(ACCEL_SAMPLING_50HZ);
     accel_tap_service_subscribe(s_accel_tap_handler);
+
+    // update configurations
+    configuration_set_handlers(
+        (ConfigurationHandlers){
+            .updated = s_config_updated_handler
+        },
+        NULL);
+    s_config_updated_handler(NULL);
     
     // display time
     siangl_layer_display_time(s_signal_layer);

@@ -1,13 +1,10 @@
 #include <pebble.h>
 #include "time_layer.h"
+#include "configuration.h"
 
-/* configurations */
-#define DISPLAY_DATE          (1)
-#define DISPLAY_CIRCLE_STROKE (0)
-
-/* code */
 struct TimeLayer {
     Layer *layer;
+    TimePattern pattern;
 };
 
 #define L_MARGIN_TOP      (2)
@@ -72,11 +69,10 @@ static void s_graphics_draw_text(GContext *ctx, const char *text, GFont const fo
 }
 
 static void s_layer_update_proc(struct Layer *layer, GContext *ctx) {
+    TimeLayer *time_layer = (TimeLayer*)layer_get_data(layer);
+    
     GRect bounds = layer_get_bounds(layer);
     graphics_context_set_antialiased(ctx, true);
-#if DISPLAY_CIRCLE_STROKE
-   graphics_context_set_stroke_width(ctx, 3);
-#endif /* DISPLAY_CIRCLE_STROKE */
 
     // time
     time_t now_time = time(NULL);
@@ -97,48 +93,42 @@ static void s_layer_update_proc(struct Layer *layer, GContext *ctx) {
     GPoint p1 = GPoint(S_CENTER_X_1, S_CENTER_Y_1);
     graphics_context_set_fill_color(ctx, GColorJaegerGreen);
     graphics_fill_circle(ctx, p1, S_RADIUS);
-#if DISPLAY_CIRCLE_STROKE
-    graphics_context_set_stroke_color(ctx, GColorMidnightGreen);
-    graphics_draw_circle(ctx, p1, S_RADIUS);
-#endif /* DISPLAY_CIRCLE_STROKE */
 
     // signal (yellow)
     GPoint p2 = GPoint(S_CENTER_X_2, S_CENTER_Y_2);
     graphics_context_set_fill_color(ctx, GColorChromeYellow);
     graphics_fill_circle(ctx, p2, S_RADIUS);
-#if DISPLAY_CIRCLE_STROKE
-    graphics_context_set_stroke_color(ctx, GColorWindsorTan);
-    graphics_draw_circle(ctx, p2, S_RADIUS);
-#endif /* DISPLAY_CIRCLE_STROKE */
 
     // signal (red)
     GPoint p3 = GPoint(S_CENTER_X_3, S_CENTER_Y_3);
     graphics_context_set_fill_color(ctx, GColorRed);
     graphics_fill_circle(ctx, p3, S_RADIUS);
-#if DISPLAY_CIRCLE_STROKE
-    graphics_context_set_stroke_color(ctx, GColorBulgarianRose);
-    graphics_draw_circle(ctx, p3, S_RADIUS);
-#endif /* DISPLAY_CIRCLE_STROKE */
 
-#if DISPLAY_DATE
-    snprintf(str, 31, "%d/%d", now_tm->tm_mon+1, now_tm->tm_mday);
-    s_graphics_draw_text(ctx, str, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), s_grect_circle_to_rect(p1, S_RADIUS));
-    
-    snprintf(str, 31, "%d", now_tm->tm_hour);
-    s_graphics_draw_text(ctx, str, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), s_grect_circle_to_rect(p2, S_RADIUS));
+    // time
+    switch (time_layer->pattern) {
+    case TP_h_mm_ss:
+        snprintf(str, 31, "%d", now_tm->tm_hour);
+        s_graphics_draw_text(ctx, str, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), s_grect_circle_to_rect(p1, S_RADIUS));
 
-    snprintf(str, 31, "%02d", now_tm->tm_min);
-    s_graphics_draw_text(ctx, str, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), s_grect_circle_to_rect(p3, S_RADIUS));
-#else /* ! DISPLAY_DATE */
-    snprintf(str, 31, "%d", now_tm->tm_hour);
-    s_graphics_draw_text(ctx, str, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), s_grect_circle_to_rect(p1, S_RADIUS));
+        snprintf(str, 31, "%02d", now_tm->tm_min);
+        s_graphics_draw_text(ctx, str, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), s_grect_circle_to_rect(p2, S_RADIUS));
 
-    snprintf(str, 31, "%02d", now_tm->tm_min);
-    s_graphics_draw_text(ctx, str, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), s_grect_circle_to_rect(p2, S_RADIUS));
+        snprintf(str, 31, "%02d", now_tm->tm_sec);
+        s_graphics_draw_text(ctx, str, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), s_grect_circle_to_rect(p3, S_RADIUS));
+        break;
+    case TP_MDD_h_mm:
+        /* fall down */
+    default:
+        snprintf(str, 31, "%d/%d", now_tm->tm_mon+1, now_tm->tm_mday);
+        s_graphics_draw_text(ctx, str, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), s_grect_circle_to_rect(p1, S_RADIUS));
 
-    snprintf(str, 31, "%02d", now_tm->tm_sec);
-    s_graphics_draw_text(ctx, str, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), s_grect_circle_to_rect(p3, S_RADIUS));
-#endif /* ! DISPLAY_DATE */
+        snprintf(str, 31, "%d", now_tm->tm_hour);
+        s_graphics_draw_text(ctx, str, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), s_grect_circle_to_rect(p2, S_RADIUS));
+
+        snprintf(str, 31, "%02d", now_tm->tm_min);
+        s_graphics_draw_text(ctx, str, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD), s_grect_circle_to_rect(p3, S_RADIUS));
+        break;
+    }
 }
     
 TimeLayer *time_layer_create(GRect window_bounds) {
@@ -154,6 +144,7 @@ TimeLayer *time_layer_create(GRect window_bounds) {
     if (layer != NULL) {
         time_layer = (TimeLayer*)layer_get_data(layer);
         time_layer->layer = layer;
+        time_layer->pattern = TP_MDD_h_mm;
         layer_set_update_proc(time_layer->layer, s_layer_update_proc);
     }
     return time_layer;
@@ -169,4 +160,9 @@ Layer *time_layer_get_layer(TimeLayer *time_layer) {
 
 void time_layer_set_hidden(TimeLayer *time_layer, bool hidden) {
     layer_set_hidden(time_layer->layer, hidden);
+}
+
+void time_layer_config_updated(TimeLayer *time_layer) {
+    // time-pattern
+    time_layer->pattern = (TimePattern)configuration_get(C_TimePattern);
 }

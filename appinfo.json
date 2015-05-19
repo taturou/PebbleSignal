@@ -1,7 +1,11 @@
 {
-    "appKeys": {},
+    "appKeys": {
+        "KEY_CONF_TIMEBAR_PATTERN": 2,
+        "KEY_CONF_TIME_PATTERN": 3,
+        "KEY_CONF_VIBES_EACH_HOUR": 1
+    },
     "capabilities": [
-        ""
+        "configurable"
     ],
     "companyName": "taturou@gmail.com",
     "longName": "signal",

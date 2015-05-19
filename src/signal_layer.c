@@ -1,17 +1,9 @@
 #include <pebble.h>
 #include "signal_layer.h"
+#include "configuration.h"
 #include "resource.h"
 #include "timebar_layer.h"
 
-/* configurations */
-#define VIBES_EACH_HOUR              (1)
-#define DISPLAY_TIMEBAR_HOUR_AND_MIN (0)
-
-#define GLANCE_DELAY_UP_TO_DOWN      (4000)
-#define GLANCE_DURATION              (250)
-#define SIGNAL_DURATION              (150)
-
-/* code */
 #define NUM_TIMEBAR (2)
 
 #define ORIGIN_X_1  (5)
@@ -21,6 +13,10 @@
 
 #define NUM_BITMAP_LAYER (2)
 
+#define GLANCE_DELAY_UP_TO_DOWN      (4000)
+#define GLANCE_DURATION              (250)
+#define SIGNAL_DURATION              (150)
+
 struct SignalLayer {
     Layer *layer;
     Layer *bitmap_base_layer;
@@ -28,7 +24,9 @@ struct SignalLayer {
     TimebarLayer *timebar_layer[NUM_TIMEBAR];
     uint16_t glance_height;
     Signal signal;
-    bool display_time;
+    TimebarPattern timebar_pattern;
+    bool vibes_each_hour;
+    bool glancing;
 };
 
 static void s_layer_update_proc(struct Layer *layer, GContext *ctx) {
@@ -40,7 +38,7 @@ static void s_glance_down_animation_stopped_handler(Animation *hide_animation, b
     SignalLayer *signal_layer = (SignalLayer*)context;
 
     animation_destroy(hide_animation);
-    signal_layer->display_time = false;
+    signal_layer->glancing = false;
 }
 
 static void s_glance_up_animation_stopped_handler(Animation *show_animation, bool finished, void *context) {
@@ -71,8 +69,8 @@ static void s_glance_up_animation_stopped_handler(Animation *show_animation, boo
 static void s_glance(SignalLayer *signal_layer) {
     Layer *layer = signal_layer->layer;
 
-    if (signal_layer->display_time == false) {
-        signal_layer->display_time = true;
+    if (signal_layer->glancing == false) {
+        signal_layer->glancing = true;
 
         GRect from_frame = layer_get_frame(layer);
         GRect to_frame = GRect(from_frame.origin.x,
@@ -138,7 +136,6 @@ static void s_set_signal(SignalLayer *signal_layer, Signal signal) {
     }
 }
 
-#if DISPLAY_TIMEBAR_HOUR_AND_MIN
 static void s_tick_display_HourAndMin(SignalLayer *signal_layer, struct tm *tick_time, TimeUnits units_changed) {
     TimebarLayer **timebar_layer = signal_layer->timebar_layer;
 
@@ -182,7 +179,7 @@ static void s_tick_display_HourAndMin(SignalLayer *signal_layer, struct tm *tick
     timebar_layer_set_value(timebar_layer[0], tick_time->tm_min);
     timebar_layer_set_value(timebar_layer[1], tick_time->tm_sec);
 }
-#else /* ! DISPLAY_TIMEBAR_HOUR_AND_MIN */
+
 static void s_tick_display_signal(SignalLayer *signal_layer, struct tm *tick_time, TimeUnits units_changed) {
     TimebarLayer **timebar_layer = signal_layer->timebar_layer;
 
@@ -226,7 +223,6 @@ static void s_tick_display_signal(SignalLayer *signal_layer, struct tm *tick_tim
     timebar_layer_set_value(timebar_layer[0], tick_time->tm_sec / 3);
     timebar_layer_set_value(timebar_layer[1], tick_time->tm_sec / 3);
 }
-#endif /* ! DISPLAY_TIMEBAR_HOUR_AND_MIN */
 
 SignalLayer *signal_layer_create(GRect window_bounds) {
     SignalLayer *signal_layer = NULL;
@@ -286,7 +282,9 @@ SignalLayer *signal_layer_create(GRect window_bounds) {
         }        
         signal_layer->glance_height = window_bounds.size.h;
         signal_layer->signal = Red;
-        signal_layer->display_time = false;
+        signal_layer->timebar_pattern = TBP_Signal;
+        signal_layer->vibes_each_hour = true;
+        signal_layer->glancing = false;
         
         // diaplay
         s_set_signal(signal_layer, Green);
@@ -317,19 +315,34 @@ void signal_layer_set_glance_height(SignalLayer *signal_layer, uint16_t height) 
 }
 
 void signal_layer_tick_handler(SignalLayer *signal_layer, struct tm *tick_time, TimeUnits units_changed) {
-#if VIBES_EACH_HOUR
-    if ((tick_time->tm_min == 0) && (tick_time->tm_sec == 0)) {
-        vibes_short_pulse();
+    // vibes
+    if (signal_layer->vibes_each_hour == true) {
+        if ((tick_time->tm_min == 0) && (tick_time->tm_sec == 0)) {
+            vibes_short_pulse();
+        }
     }
-#endif
 
-#if DISPLAY_TIMEBAR_HOUR_AND_MIN
-    s_tick_display_HourAndMin(signal_layer, tick_time, units_changed);
-#else /* ! DISPLAY_TIMEBAR_HOUR_AND_MIN */
-    s_tick_display_signal(signal_layer, tick_time, units_changed);
-#endif /* ! DISPLAY_TIMEBAR_HOUR_AND_MIN */
+    // display
+    switch (signal_layer->timebar_pattern) {
+    case TBP_HourAndMin:
+        s_tick_display_HourAndMin(signal_layer, tick_time, units_changed);
+        break;
+    case TBP_Signal:
+        /* fall down */
+    default:
+        s_tick_display_signal(signal_layer, tick_time, units_changed);
+        break;
+    };
 }
 
 void siangl_layer_display_time(SignalLayer *signal_layer) {
     s_glance(signal_layer);
+}
+
+void signal_layer_config_updated(SignalLayer *signal_layer) {
+    // vibes-each-hour
+    signal_layer->vibes_each_hour = (bool)configuration_get(C_VibesEachHour);
+    
+    // timebar-pattern
+    signal_layer->timebar_pattern = (TimebarPattern)configuration_get(C_TimebarPattern);
 }

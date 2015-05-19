@@ -8,3 +8,4 @@ TimeLayer *time_layer_create(GRect window_bounds);
 void time_layer_destroy(TimeLayer *time_layer);
 Layer *time_layer_get_layer(TimeLayer *time_layer);
 void time_layer_set_hidden(TimeLayer *time_layer, bool hidden);
+void time_layer_config_updated(TimeLayer *time_layer);
