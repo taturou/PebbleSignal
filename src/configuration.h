@@ -12,6 +12,7 @@ typedef enum Configurations Configurations;
 enum TimebarPattern {
     TBP_Signal = 0,
     TBP_HourAndMin,
+    TBP_None,
 };
 typedef enum TimebarPattern TimebarPattern;
 

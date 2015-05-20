@@ -2,10 +2,6 @@
 #include "time_layer.h"
 #include "configuration.h"
 
-struct TimeLayer {
-    Layer *layer;
-    TimePattern pattern;
-};
 
 #define L_MARGIN_TOP      (2)
 #define L_MARGIN_BOTTOM   (2)
@@ -27,6 +23,11 @@ struct TimeLayer {
 #define S_CENTER_Y_2      (S_CENTER_Y_1)
 #define S_CENTER_X_3      (S_CENTER_X_2 + (S_RADIUS * 2 + S_MARGIN_NEXT))
 #define S_CENTER_Y_3      (S_CENTER_Y_1)
+
+struct TimeLayer {
+    Layer *layer;
+    TimePattern pattern;
+};
 
 static GRect s_grect_circle_to_rect(GPoint p, uint16_t radius) {
     GRect rect;
@@ -142,10 +143,14 @@ TimeLayer *time_layer_create(GRect window_bounds) {
     
     Layer *layer = layer_create_with_data(frame, sizeof(TimeLayer));
     if (layer != NULL) {
+        // setup layer
+        layer_set_update_proc(layer, s_layer_update_proc);
+        
+        // set members
         time_layer = (TimeLayer*)layer_get_data(layer);
         time_layer->layer = layer;
         time_layer->pattern = TP_MDD_h_mm;
-        layer_set_update_proc(time_layer->layer, s_layer_update_proc);
+        time_layer_config_updated(time_layer);
     }
     return time_layer;
 }

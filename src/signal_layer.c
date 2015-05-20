@@ -178,9 +178,11 @@ static void s_tick_display_HourAndMin(SignalLayer *signal_layer, struct tm *tick
     }
     timebar_layer_set_value(timebar_layer[0], tick_time->tm_min);
     timebar_layer_set_value(timebar_layer[1], tick_time->tm_sec);
+    timebar_layer_set_hidden(timebar_layer[0], false);
+    timebar_layer_set_hidden(timebar_layer[1], false);
 }
 
-static void s_tick_display_signal(SignalLayer *signal_layer, struct tm *tick_time, TimeUnits units_changed) {
+static void s_tick_display_Signal(SignalLayer *signal_layer, struct tm *tick_time, TimeUnits units_changed) {
     TimebarLayer **timebar_layer = signal_layer->timebar_layer;
 
     if ((tick_time->tm_min % 2) == 0) {
@@ -222,6 +224,38 @@ static void s_tick_display_signal(SignalLayer *signal_layer, struct tm *tick_tim
     }
     timebar_layer_set_value(timebar_layer[0], tick_time->tm_sec / 3);
     timebar_layer_set_value(timebar_layer[1], tick_time->tm_sec / 3);
+    timebar_layer_set_hidden(timebar_layer[0], false);
+    timebar_layer_set_hidden(timebar_layer[1], false);
+}
+
+static void s_tick_display_None(SignalLayer *signal_layer, struct tm *tick_time, TimeUnits units_changed) {
+    TimebarLayer **timebar_layer = signal_layer->timebar_layer;
+
+    if ((tick_time->tm_min % 2) == 0) {
+        s_set_signal(signal_layer, Red);
+        if (tick_time->tm_sec == 0) {
+            /* do nothing for animation */
+        } else {
+            s_set_onoff(signal_layer, On);
+        }
+    } else {
+        s_set_signal(signal_layer, Green);
+        if (tick_time->tm_sec == 0) {
+            /* do nothing for animation */
+        } else {
+            if (tick_time->tm_sec < 45) {
+                s_set_onoff(signal_layer, On);
+            } else {
+                if ((tick_time->tm_sec % 2) == 0) {
+                    s_set_onoff(signal_layer, On);
+                } else {
+                    s_set_onoff(signal_layer, Off);
+                }
+            }
+        }
+    }
+    timebar_layer_set_hidden(timebar_layer[0], true);
+    timebar_layer_set_hidden(timebar_layer[1], true);
 }
 
 SignalLayer *signal_layer_create(GRect window_bounds) {
@@ -285,10 +319,12 @@ SignalLayer *signal_layer_create(GRect window_bounds) {
         signal_layer->timebar_pattern = TBP_Signal;
         signal_layer->vibes_each_hour = true;
         signal_layer->glancing = false;
+        signal_layer_config_updated(signal_layer);
         
         // diaplay
-        s_set_signal(signal_layer, Green);
-        s_set_onoff(signal_layer, On);
+        time_t t = time(NULL);
+        struct tm *tm = localtime(&t);
+        signal_layer_tick_handler(signal_layer, tm, SECOND_UNIT);
     }
     return signal_layer;
 }
@@ -327,10 +363,13 @@ void signal_layer_tick_handler(SignalLayer *signal_layer, struct tm *tick_time, 
     case TBP_HourAndMin:
         s_tick_display_HourAndMin(signal_layer, tick_time, units_changed);
         break;
+    case TBP_None:
+        s_tick_display_None(signal_layer, tick_time, units_changed);
+        break;
     case TBP_Signal:
         /* fall down */
     default:
-        s_tick_display_signal(signal_layer, tick_time, units_changed);
+        s_tick_display_Signal(signal_layer, tick_time, units_changed);
         break;
     };
 }

@@ -1,8 +1,9 @@
 {
     "appKeys": {
-        "KEY_CONF_TIMEBAR_PATTERN": 2,
-        "KEY_CONF_TIME_PATTERN": 3,
-        "KEY_CONF_VIBES_EACH_HOUR": 1
+        "KEY_CONF_TIMEBAR_PATTERN": 3,
+        "KEY_CONF_TIME_PATTERN": 4,
+        "KEY_CONF_VIBES_EACH_HOUR": 2,
+        "KEY_NOTIFY_REQ_CONF": 1
     },
     "capabilities": [
         "configurable"

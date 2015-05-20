@@ -7,14 +7,15 @@
 #define CURRENT_CONFIG_VERSION      (1)
 #define NUM_KEY_CONFIG              (3)
 
-#define KEY_CONF_CONFIG_VERSION     (0)
-#define KEY_CONF_VIBES_EACH_HOUR    (1)
-#define KEY_CONF_TIMEBAR_PATTERN    (2)
-#define KEY_CONF_TIME_PATTERN       (3)
+#define KEY_CONFIG_VERSION          (0)
+#define KEY_NOTIFY_REQ_CONF         (1)
+#define KEY_CONF_VIBES_EACH_HOUR    (2)
+#define KEY_CONF_TIMEBAR_PATTERN    (3)
+#define KEY_CONF_TIME_PATTERN       (4)
 
 #define DEFAULT_VALUE_CONF_CONFIG_VERSION     (CURRENT_CONFIG_VERSION)
 #define DEFAULT_VALUE_CONF_VIBES_EACH_HOUR    (true)
-#define DEFAULT_VALUE_CONF_TIMEBAR_PATTERN    (TBP_Signal)
+#define DEFAULT_VALUE_CONF_TIMEBAR_PATTERN    (TBP_None)
 #define DEFAULT_VALUE_CONF_TIME_PATTERN       (TP_MDD_h_mm)
 
 struct ConfigData {
@@ -42,6 +43,8 @@ static ConfigData *s_config_get_data(void) {
     return &data;
 }
 
+static void s_app_message_outbox_send(void);
+
 static void s_config_init_data(void) {
     ConfigData *data = s_config_get_data();
     data->vibes_each_hour = DEFAULT_VALUE_CONF_VIBES_EACH_HOUR;
@@ -61,12 +64,16 @@ static void s_config_init_handlers(void) {
 }
 
 static void s_config_read_from_dictionary(DictionaryIterator *iter) {
-    s_config_init_data();
     ConfigData *data = s_config_get_data();
+
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "read configuration");
 
     Tuple *tuple = dict_read_first(iter);
     while (tuple != NULL) {
         switch (tuple->key) {
+        case KEY_NOTIFY_REQ_CONF:
+            s_app_message_outbox_send();
+            break;
         case KEY_CONF_VIBES_EACH_HOUR:
             data->vibes_each_hour = (bool)tuple->value->int8;
             break;
@@ -98,6 +105,8 @@ static void s_persist_read_v1(void) {
         uint8_t buffer[buffer_size];
         
         if (persist_read_data(STORAGE_KEY_V1_DICTIONARY, buffer, buffer_size) == (int)buffer_size) {
+            s_config_init_data();
+
             DictionaryIterator iter;
             (void)dict_read_begin_from_buffer(&iter, buffer, buffer_size);
             s_config_read_from_dictionary(&iter);
@@ -144,6 +153,7 @@ static void s_app_message_outbox_sent_callback(DictionaryIterator *iterator, voi
 static void s_app_message_outbox_send(void) {
     ConfigData *data = s_config_get_data();
 
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "s_app_message_outbox_send");
     DictionaryIterator *iter;
     app_message_outbox_begin(&iter);
     dict_write_int8(iter, KEY_CONF_VIBES_EACH_HOUR, (int8_t)data->vibes_each_hour);
@@ -171,9 +181,6 @@ void configuration_load(void) {
 
     // set app-message callback
     s_app_message_set_callback();
-    
-    // send configuration to iPhone
-    s_app_message_outbox_send();
 }
 
 void configuration_set_handlers(ConfigurationHandlers callback, void *context) {
