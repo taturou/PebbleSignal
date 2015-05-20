@@ -16,7 +16,7 @@ Pebble.addEventListener(
 Pebble.addEventListener(
     "showConfiguration",
     function(e) {
-        Pebble.openURL("https://dl.dropboxusercontent.com/u/10824180/pebble%20config%20pages/sdktut9-config.html");
+        Pebble.openURL("http://pebble_signal.ngrok.io/config.html");
     }
 );
 
