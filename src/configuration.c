@@ -122,13 +122,12 @@ static void s_persist_migrate(void) {
     uint32_t version = persist_read_int(STORAGE_KEY_CONFIG_VERSION); // defaults to 0 if key is missing.
 
     switch(version) {
-    case 0:
-        s_persist_clear();
-        break;
     case 1:
         s_persist_read_v1();
         break;
-     default:
+    case 0:
+        /* fall down */
+    default:
         s_persist_clear();
         break;
     }
@@ -148,6 +147,7 @@ static void s_app_message_outbox_failed_callback(DictionaryIterator *iterator, A
 
 static void s_app_message_outbox_sent_callback(DictionaryIterator *iterator, void *context) {
     /* do nothing */
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "s_app_message_outbox_sent_callback");
 }
 
 static void s_app_message_outbox_send(void) {
