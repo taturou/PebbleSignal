@@ -384,4 +384,7 @@ void signal_layer_config_updated(SignalLayer *signal_layer) {
     
     // timebar-pattern
     signal_layer->timebar_pattern = (TimebarPattern)configuration_get(C_TimebarPattern);
+
+    // update
+    layer_mark_dirty(signal_layer->layer);
 }

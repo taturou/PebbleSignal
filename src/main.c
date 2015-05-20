@@ -26,6 +26,7 @@ static void s_click_config_provider(void *context) {
 static void s_config_updated_handler(void *context) {
     (void)context;
 
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "s_config_updated_handler");
     time_layer_config_updated(s_time_layer);
     signal_layer_config_updated(s_signal_layer);
 }

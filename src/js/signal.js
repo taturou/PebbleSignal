@@ -23,11 +23,11 @@ Pebble.addEventListener(
 Pebble.addEventListener(
     "webviewclosed",
     function(e) {
-        var configuration = JSON.parse(decodeURIComponent(e.response));
-        console.log("Configuration window returned: " + JSON.stringify(configuration));
+        var config = JSON.parse(decodeURIComponent(e.response));
+        console.log("Configuration window returned: " + JSON.stringify(config));
 
-        Pebble.sendAppMessage({"KEY_CONF_VIBES_EACH_HOUR": 0,
-                               "KEY_CONF_TIMEBAR_PATTERN": 1,
-                               "KEY_CONF_TIME_PATTERN": 1});
+        Pebble.sendAppMessage({"KEY_CONF_VIBES_EACH_HOUR": Number(config.vibes),
+                               "KEY_CONF_TIMEBAR_PATTERN": Number(config.timebar),
+                               "KEY_CONF_TIME_PATTERN": Number(config.time)});
     }
 );

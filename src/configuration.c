@@ -66,8 +66,6 @@ static void s_config_init_handlers(void) {
 static void s_config_read_from_dictionary(DictionaryIterator *iter) {
     ConfigData *data = s_config_get_data();
 
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "read configuration");
-
     Tuple *tuple = dict_read_first(iter);
     while (tuple != NULL) {
         switch (tuple->key) {
@@ -76,12 +74,15 @@ static void s_config_read_from_dictionary(DictionaryIterator *iter) {
             break;
         case KEY_CONF_VIBES_EACH_HOUR:
             data->vibes_each_hour = (bool)tuple->value->int8;
+            APP_LOG(APP_LOG_LEVEL_DEBUG, "read config: vibes: %d", data->vibes_each_hour);
             break;
         case KEY_CONF_TIMEBAR_PATTERN:
             data->timebar_pattern = (TimebarPattern)tuple->value->int32;
+            APP_LOG(APP_LOG_LEVEL_DEBUG, "read config: timebar: %d", data->timebar_pattern);
             break;
         case KEY_CONF_TIME_PATTERN:
             data->time_pattern = (TimePattern)tuple->value->int32;
+            APP_LOG(APP_LOG_LEVEL_DEBUG, "read config: time: %d", data->time_pattern);
             break;
         default:
             /* do nothing */
@@ -135,6 +136,9 @@ static void s_persist_migrate(void) {
 
 static void s_app_message_inbox_received_callback(DictionaryIterator *iter, void *context) {
     s_config_read_from_dictionary(iter);
+
+    ConfigHandlersData *data = s_config_get_handlers();
+    data->callback.updated(data->context);
 }
 
 static void s_app_message_inbox_dropped_callback(AppMessageResult reason, void *context) {

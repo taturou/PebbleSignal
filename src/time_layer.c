@@ -170,4 +170,7 @@ void time_layer_set_hidden(TimeLayer *time_layer, bool hidden) {
 void time_layer_config_updated(TimeLayer *time_layer) {
     // time-pattern
     time_layer->pattern = (TimePattern)configuration_get(C_TimePattern);
+
+    // update
+    layer_mark_dirty(time_layer->layer);
 }
