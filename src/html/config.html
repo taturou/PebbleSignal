@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Signal Configuration</title>
+  </head>
+  <body>
+    <h1>Signal Configuration</h1>
+    <p>Choose watchapp settings</p>
+
+    <p>Vibes each hour:
+    <select id="vibes_select">
+      <option value="0">Off</option>
+      <option value="1">On</option>
+    </select>
+    </p>
+
+    <p>Timebar:
+    <select id="timebar_select">
+      <option value="0">Signal</option>
+      <option value="1">Hour &amp; Min</option>
+      <option value="2">None</option>
+    </select>
+    </p>
+
+    <p>Time:
+    <select id="time_select">
+      <option value="0">M/DD h mm</option>
+      <option value="1">h mm ss</option>
+    </select>
+    </p>
+
+    <p>
+      <button id="save_button">Save</button>
+    </p>
+
+    <script>
+      //Setup to allow easy adding more options later
+      function saveOptions() {
+        var vibesSelect = document.getElementById("vibes_select");
+        var timebarSelect = document.getElementById("timebar_select");
+        var timeSelect = document.getElementById("time_select");
+
+        var options = {
+          "vibes": vibesSelect.options[vibesSelect.selectedIndex].value,
+          "timebar": timebarSelect.options[timebarSelect.selectedIndex].value,
+          "time": timeSelect.options[timeSelect.selectedIndex].value,
+        }
+
+        return options;
+      };
+
+      var submitButton = document.getElementById("save_button");
+      submitButton.addEventListener("click",
+        function() {
+          console.log("Submit");
+
+          var options = saveOptions();
+          var location = "pebblejs://close#" + encodeURIComponent(JSON.stringify(options));
+
+          document.location = location;
+        },
+      false);
+    </script>
+  </body>
+</html>
