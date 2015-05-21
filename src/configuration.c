@@ -92,6 +92,17 @@ static void s_config_read_from_dictionary(DictionaryIterator *iter) {
     }
 }
 
+static void s_config_write_to_buffer(uint8_t *buffer, size_t buffer_size) {
+    ConfigData *data = s_config_get_data();
+
+    DictionaryIterator iter;
+    dict_write_begin(&iter, buffer, buffer_size);
+    dict_write_int8(&iter, KEY_CONF_VIBES_EACH_HOUR, data->vibes_each_hour);
+    dict_write_int32(&iter, KEY_CONF_TIMEBAR_PATTERN, data->timebar_pattern);
+    dict_write_int32(&iter, KEY_CONF_TIME_PATTERN, data->time_pattern);
+    dict_write_end(&iter);
+}
+
 static void s_persist_clear(void) {
     (void)persist_delete(STORAGE_KEY_CONFIG_VERSION);
     (void)persist_delete(STORAGE_KEY_V1_DICTIONARY);
@@ -119,6 +130,16 @@ static void s_persist_read_v1(void) {
     }
 }
 
+static void s_persist_write_v1(void) {
+    const size_t buffer_size = s_get_dict_buffer_size();
+    uint8_t buffer[buffer_size];
+
+    s_config_write_to_buffer(buffer, buffer_size);
+
+    (void)persist_write_int(STORAGE_KEY_CONFIG_VERSION, CURRENT_CONFIG_VERSION);
+    (void)persist_write_data(STORAGE_KEY_V1_DICTIONARY, buffer, buffer_size);
+}
+
 static void s_persist_migrate(void) {
     uint32_t version = persist_read_int(STORAGE_KEY_CONFIG_VERSION); // defaults to 0 if key is missing.
 
@@ -136,6 +157,7 @@ static void s_persist_migrate(void) {
 
 static void s_app_message_inbox_received_callback(DictionaryIterator *iter, void *context) {
     s_config_read_from_dictionary(iter);
+    s_persist_write_v1();
 
     ConfigHandlersData *data = s_config_get_handlers();
     data->callback.updated(data->context);
