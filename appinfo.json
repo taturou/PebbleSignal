@@ -14,23 +14,8 @@
     "resources": {
         "media": [
             {
-                "file": "images/signal_green_DarkGray.png",
-                "name": "IMAGE_SIGNAL_GREEN_DARKGRAY",
-                "type": "png"
-            },
-            {
-                "file": "images/signal_red_DarkGray.png",
-                "name": "IMAGE_SIGNAL_RED_DARKGRAY",
-                "type": "png"
-            },
-            {
-                "file": "images/signal_red_Red.png",
-                "name": "IMAGE_SIGNAL_RED_RED",
-                "type": "png"
-            },
-            {
-                "file": "images/signal_red_BulgarianRose.png",
-                "name": "IMAGE_SIGNAL_RED_BULGARIANROSE",
+                "file": "images/signal_green_MidnightGreen.png",
+                "name": "IMAGE_SIGNAL_GREEN_MIDNIGHTGREEN",
                 "type": "png"
             },
             {
@@ -39,8 +24,23 @@
                 "type": "png"
             },
             {
-                "file": "images/signal_green_MidnightGreen.png",
-                "name": "IMAGE_SIGNAL_GREEN_MIDNIGHTGREEN",
+                "file": "images/signal_red_BulgarianRose.png",
+                "name": "IMAGE_SIGNAL_RED_BULGARIANROSE",
+                "type": "png"
+            },
+            {
+                "file": "images/signal_red_Red.png",
+                "name": "IMAGE_SIGNAL_RED_RED",
+                "type": "png"
+            },
+            {
+                "file": "images/signal_red_DarkGray.png",
+                "name": "IMAGE_SIGNAL_RED_DARKGRAY",
+                "type": "png"
+            },
+            {
+                "file": "images/signal_green_DarkGray.png",
+                "name": "IMAGE_SIGNAL_GREEN_DARKGRAY",
                 "type": "png"
             }
         ]

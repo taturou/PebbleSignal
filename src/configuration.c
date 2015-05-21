@@ -163,6 +163,7 @@ static void s_app_message_outbox_send(void) {
     dict_write_int8(iter, KEY_CONF_VIBES_EACH_HOUR, (int8_t)data->vibes_each_hour);
     dict_write_int32(iter, KEY_CONF_TIMEBAR_PATTERN, (int32_t)data->timebar_pattern);
     dict_write_int32(iter, KEY_CONF_TIME_PATTERN, (int32_t)data->time_pattern);
+    dict_write_end (iter);
     app_message_outbox_send();
 }
 
