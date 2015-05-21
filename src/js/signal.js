@@ -26,7 +26,7 @@ Pebble.addEventListener(
 Pebble.addEventListener(
     "showConfiguration",
     function(e) {
-        // var url = "http://pebble_signal.ngrok.io/config.html" // for debug
+        // var url = "https://pebble_signal.srvdir.net " // for debug
         var url = "https://1c9dd430089b9ca482027abba2408b706433aefa.googledrive.com/host/0B0SsQ4mAFAiofldjQ203S1Z4WWUySVRjM1NvSEQ2UHA2eDNwSGJJY1VoRUFGNFB6YnJsS3M/index.html";
         url += "?vibes=" + config.KEY_CONF_VIBES_EACH_HOUR;
         url += "&timebar=" + config.KEY_CONF_TIMEBAR_PATTERN;

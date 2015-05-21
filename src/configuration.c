@@ -74,15 +74,12 @@ static void s_config_read_from_dictionary(DictionaryIterator *iter) {
             break;
         case KEY_CONF_VIBES_EACH_HOUR:
             data->vibes_each_hour = (bool)tuple->value->int8;
-            APP_LOG(APP_LOG_LEVEL_DEBUG, "read config: vibes: %d", data->vibes_each_hour);
             break;
         case KEY_CONF_TIMEBAR_PATTERN:
             data->timebar_pattern = (TimebarPattern)tuple->value->int32;
-            APP_LOG(APP_LOG_LEVEL_DEBUG, "read config: timebar: %d", data->timebar_pattern);
             break;
         case KEY_CONF_TIME_PATTERN:
             data->time_pattern = (TimePattern)tuple->value->int32;
-            APP_LOG(APP_LOG_LEVEL_DEBUG, "read config: time: %d", data->time_pattern);
             break;
         default:
             /* do nothing */
@@ -173,13 +170,11 @@ static void s_app_message_outbox_failed_callback(DictionaryIterator *iterator, A
 
 static void s_app_message_outbox_sent_callback(DictionaryIterator *iterator, void *context) {
     /* do nothing */
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "s_app_message_outbox_sent_callback");
 }
 
 static void s_app_message_outbox_send(void) {
     ConfigData *data = s_config_get_data();
 
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "s_app_message_outbox_send");
     DictionaryIterator *iter;
     app_message_outbox_begin(&iter);
     dict_write_int8(iter, KEY_CONF_VIBES_EACH_HOUR, (int8_t)data->vibes_each_hour);

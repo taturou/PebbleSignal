@@ -4,10 +4,13 @@
 #include "time_layer.h"
 #include "signal_layer.h"
 
+#define IS_WATCHAPP (0)
+    
 static Window *s_window;
 static TimeLayer *s_time_layer;
 static SignalLayer *s_signal_layer;
 
+#if IS_WATCHAPP
 static void s_select_click_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
@@ -22,11 +25,11 @@ static void s_click_config_provider(void *context) {
     window_single_click_subscribe(BUTTON_ID_UP, s_up_click_handler);
     window_single_click_subscribe(BUTTON_ID_DOWN, s_down_click_handler);
 }
-
+#endif /* IS_WATCHAPP */
+    
 static void s_config_updated_handler(void *context) {
     (void)context;
 
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "s_config_updated_handler");
     time_layer_config_updated(s_time_layer);
     signal_layer_config_updated(s_signal_layer);
 }
@@ -90,7 +93,9 @@ static void s_init(void) {
     window_set_fullscreen(s_window, true);
 #endif /* PBL_PLATFORM_APLITE */
     window_set_background_color(s_window, GColorBlack);
+#if IS_WATCHAPP
     window_set_click_config_provider(s_window, s_click_config_provider);
+#endif /* IS_WATCHAPP */
     window_set_window_handlers(s_window, (WindowHandlers) {
         .load = s_window_load,
         .unload = s_window_unload,
