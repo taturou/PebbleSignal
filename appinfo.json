@@ -14,18 +14,8 @@
     "resources": {
         "media": [
             {
-                "file": "images/signal_green_MidnightGreen.png",
-                "name": "IMAGE_SIGNAL_GREEN_MIDNIGHTGREEN",
-                "type": "png"
-            },
-            {
                 "file": "images/signal_green_JaegerGreen.png",
                 "name": "IMAGE_SIGNAL_GREEN_JAEGERGREEN",
-                "type": "png"
-            },
-            {
-                "file": "images/signal_red_BulgarianRose.png",
-                "name": "IMAGE_SIGNAL_RED_BULGARIANROSE",
                 "type": "png"
             },
             {
