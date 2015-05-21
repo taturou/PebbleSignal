@@ -1,38 +1,37 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="UTF-8">
     <title>Signal Configuration</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!-- BASSCSS (http://www.basscss.com) -->
+    <link href="https://d2v52k3cl9vedd.cloudfront.net/basscss/6.1.5/basscss.min.css" rel="stylesheet">
   </head>
   <body>
-    <h1>Signal Configuration</h1>
-    <p>Choose watchapp settings</p>
+    <div class="clearfix border-top p2">
+      <h1 class="m0 p1">Vibes each hour</h1>
+      <select class="block full-width field-light mb1 h2" id="vibes_select">
+        <option value="0">Off</option>
+        <option value="1">On</option>
+      </select>
 
-    <p>Vibes each hour:
-    <select id="vibes_select">
-      <option value="0">Off</option>
-      <option value="1">On</option>
-    </select>
-    </p>
+      <h1 class="m0 p1">Timebar pattern</h1>
+      <select class="block full-width field-light mb1 h2" id="timebar_select">
+        <option value="0">Signal</option>
+        <option value="1">Hour &amp; Min</option>
+        <option value="2">None</option>
+      </select>
 
-    <p>Timebar:
-    <select id="timebar_select">
-      <option value="0">Signal</option>
-      <option value="1">Hour &amp; Min</option>
-      <option value="2">None</option>
-    </select>
-    </p>
+      <h1 class="m0 p1">Time pattern</h1>
+      <select class="block full-width field-light mb1 h2" id="time_select">
+        <option value="0">M/DD h mm</option>
+        <option value="1">h mm ss</option>
+      </select>
 
-    <p>Time:
-    <select id="time_select">
-      <option value="0">M/DD h mm</option>
-      <option value="1">h mm ss</option>
-    </select>
-    </p>
-
-    <p>
-      <button id="save_button">Save</button>
-    </p>
+      <p class="mt3">
+        <button class="button button-big full-width h1 p1" id="save_button">Save</button>
+      </p>
+    </div>
 
     <script>
       // reflect GET parameters
