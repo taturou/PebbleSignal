@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Signal Configuration</title>
+  </head>
+  <body>
+    <h1>Signal Configuration</h1>
+    <p>Choose watchapp settings</p>
+
+    <p>Vibes each hour:
+    <select id="vibes_select">
+      <option value="0">Off</option>
+      <option value="1">On</option>
+    </select>
+    </p>
+
+    <p>Timebar:
+    <select id="timebar_select">
+      <option value="0">Signal</option>
+      <option value="1">Hour &amp; Min</option>
+      <option value="2">None</option>
+    </select>
+    </p>
+
+    <p>Time:
+    <select id="time_select">
+      <option value="0">M/DD h mm</option>
+      <option value="1">h mm ss</option>
+    </select>
+    </p>
+
+    <p>
+      <button id="save_button">Save</button>
+    </p>
+
+    <script>
+      // reflect GET parameters
+      function get_http_get_parameters() {
+        var json = {"vibes":1, "timebar":2, "time":0};
+        if( 1 < window.location.search.length )
+        {
+            // '?' is not necessary
+            var query = window.location.search.substring(1);
+
+            var parameters = query.split('&');
+            for(var i = 0; i < parameters.length; i++){
+                var element = parameters[i].split('=');
+
+                var name  = decodeURIComponent(element[0]);
+                var value = decodeURIComponent(element[1]);
+                json[name] = value;
+            }
+        }
+        return json;
+      }
+
+      function set_config() {
+        var vibes_select   = document.getElementById("vibes_select");
+        var timebar_select = document.getElementById("timebar_select");
+        var time_select    = document.getElementById("time_select");
+
+        var config = get_http_get_parameters();
+        vibes_select.selectedIndex   = config.vibes;
+        timebar_select.selectedIndex = config.timebar;
+        time_select.selectedIndex    = config.time;
+      }
+      set_config();
+
+      // create configuration JSON
+      function get_config() {
+        var vibes_select   = document.getElementById("vibes_select");
+        var timebar_select = document.getElementById("timebar_select");
+        var time_select    = document.getElementById("time_select");
+
+        var config = {
+          "vibes":   vibes_select.options[vibes_select.selectedIndex].value,
+          "timebar": timebar_select.options[timebar_select.selectedIndex].value,
+          "time":    time_select.options[time_select.selectedIndex].value,
+        }
+
+        return config;
+      };
+
+      // 'Save' button
+      var save_button = document.getElementById("save_button");
+      save_button.addEventListener(
+          "click",
+          function() {
+            console.log("Submit");
+
+            var config = get_config();
+            var location = "pebblejs://close#" + encodeURIComponent(JSON.stringify(config));
+            document.location = location;
+          },
+          false);
+    </script>
+  </body>
+</html>
