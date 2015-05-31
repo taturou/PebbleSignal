@@ -1,2 +1,8 @@
 /.lock-waf_linux2_build
 /build/
+.DS_Store
+/.lock-waf_darwin_build
+/GPATH
+/GRTAGS
+/GTAGS
+/tags
