@@ -1,4 +1,4 @@
-PEBBLE=/home/h-morishita/pebble-dev/PebbleSDK-current/bin/pebble
+PEBBLE=pebble
 
 all:
 	$(PEBBLE) build
